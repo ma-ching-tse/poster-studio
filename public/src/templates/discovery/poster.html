@@ -28,11 +28,12 @@
   body.size-web .stage { height: 600px; }
 
   .abs { position: absolute; }
+  .photo { pointer-events: none; } /* 前景岩石盖住币面，别挡点击上传的手型 */
   .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   .coin { border-radius: 50%; overflow: hidden; }
   .coin img { width: 100%; height: 100%; display: block; object-fit: cover; }
-  .glow { mix-blend-mode: plus-lighter; }
+  .glow { mix-blend-mode: plus-lighter; pointer-events: none; } /* 光晕盖在币上，别挡点击上传 */
   .glow img { width: 100%; height: 100%; display: block; }
 
   .logorow { display: flex; align-items: center; gap: 45px; }

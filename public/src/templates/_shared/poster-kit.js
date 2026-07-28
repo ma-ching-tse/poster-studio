@@ -33,11 +33,19 @@
       });
     });
     document.querySelectorAll('[data-edit-image]').forEach((el) => {
-      if (el.dataset.imgBound) return; // 常驻节点（不随 render 重建）防止重复挂监听
-      el.dataset.imgBound = '1';
       el.style.cursor = 'pointer';
       el.title = '点击上传图片';
-      el.addEventListener('click', () => pickImage(el.dataset.editImage));
+    });
+  }
+
+  // 图片点击走文档级委托 + elementsFromPoint：装饰层（光晕/前景岩石等）盖在
+  // 图片槽上面也能点中下层目标；正在直编的文字优先，不弹上传框
+  if (EDIT) {
+    document.addEventListener('click', (e) => {
+      if (e.target.closest && e.target.closest('[data-edit]')) return;
+      const hit = document.elementsFromPoint(e.clientX, e.clientY)
+        .find((n) => n.dataset && n.dataset.editImage !== undefined);
+      if (hit) pickImage(hit.dataset.editImage);
     });
   }
 
