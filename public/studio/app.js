@@ -29,7 +29,63 @@ const manifest = () => templates.find(t => t.id === state.template);
 
 async function init() {
   templates = await (await fetch('/api/templates')).json();
-  selectTemplate(templates[0].id);
+  buildGallery();
+  route();
+}
+
+// —— 画廊 / 生成器双视图（hash 路由）——
+// 空 hash = 画廊（按 manifest.line 产品线分组）；#/t/<id> = 该模板的生成器。
+// 返回画廊不清 state：误触返回再进来，稿子还在。
+function route() {
+  const id = decodeURIComponent((location.hash.match(/^#\/t\/(.+)$/) || [])[1] || '');
+  const t = templates.find(t => t.id === id);
+  document.body.classList.toggle('in-studio', !!t);
+  if (t && state.template !== t.id) selectTemplate(t.id);
+}
+addEventListener('hashchange', route);
+$('back').onclick = () => { location.hash = '#/'; };
+
+// 卡片缩略图 = 模板 iframe 灌 fixture 后按卡宽 zoom 缩放的实时预览，
+// 不维护缩略图文件——新模板进 registry 即自动出现在画廊。
+function buildGallery() {
+  const CARD_W = 220;
+  const groups = new Map(); // 产品线 -> 模板列表（按 registry 顺序）
+  for (const t of templates) {
+    const line = t.line || '其他';
+    if (!groups.has(line)) groups.set(line, []);
+    groups.get(line).push(t);
+  }
+  for (const [line, list] of groups) {
+    const col = document.createElement('div');
+    col.className = 'line';
+    const title = document.createElement('div');
+    title.className = 'line-title';
+    title.textContent = line;
+    col.appendChild(title);
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    for (const t of list) {
+      const s = t.sizes[0];
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.onclick = () => { location.hash = `#/t/${t.id}`; };
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      const iframe = document.createElement('iframe');
+      iframe.width = s.viewW;
+      iframe.height = s.viewH;
+      iframe.style.zoom = String(CARD_W / s.viewW);
+      iframe.onload = () => iframe.contentWindow.postMessage(
+        { type: 'set-data', data: { ...t.fixture, _size: s.id } }, '*');
+      iframe.src = `/src/templates/${t.id}/poster.html`;
+      thumb.appendChild(iframe);
+      card.append(thumb, Object.assign(document.createElement('div'),
+        { className: 'card-name', textContent: t.name }));
+      cards.appendChild(card);
+    }
+    col.appendChild(cards);
+    $('lines').appendChild(col);
+  }
 }
 
 function selectTemplate(id) {
@@ -108,9 +164,8 @@ function seedLang(v) {
 
 function renderSidebar() {
   const m = manifest();
+  $('studio-title').textContent = m.name; // 模板在画廊选定，侧栏标题即模板名
   $('import').hidden = !m.brief; // 提需导入是模板级开关（manifest.brief），savings 等模板不出入口
-  seg($('template-seg'), templates.map(t => ({ value: t.id, label: t.name })),
-    state.template, (v) => selectTemplate(v));
   seg($('size-seg'), m.sizes.map(s => ({ value: s.id, label: s.id })),
     state.size, (v) => { state.size = v; loadPreview(); });
 
@@ -480,6 +535,7 @@ function renderBriefReport(box, m, r) {
 // 已选语言子集按 brief 覆盖，当前稿切到原文语言（fixture.lang）优先。
 function applyBrief({ template, result }) {
   if (state.template !== template) selectTemplate(template);
+  location.hash = `#/t/${template}`; // brief 可能切模板，hash 同步（route 见 state 已一致，不会重置稿子）
   const m = manifest();
   const langField = m.fields.find(f => f.key === 'lang');
   state.langData = {};

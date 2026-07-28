@@ -1,0 +1,139 @@
+<!doctype html>
+<!-- 空投海报 — 按 Figma 稿 rZ4oMllhlmkSm2aA1w0P6U 节点 62:4314 制作。
+     双画布：pop 1200×1200 / web 1200×600，stage 按设计 px 排版，zoom 1/3。
+     币面（coin.png）是整圆可替换面：金属圈合成在降落伞图里，
+     运营上传图标即整圆覆盖币面；光效椭圆（plus-lighter）恒叠最上。 -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('../../../assets/fonts/poppins.css');
+  @import url('../../../assets/fonts/harmony.css');
+  @import url('../../../assets/fonts/alexandria.css'); /* 时间行按设计稿用 Alexandria */
+
+  html, body { margin: 0; overflow: hidden; }
+  body { background: #000; }
+  body.size-pop { width: 400px; height: 400px; }
+  body.size-web { width: 400px; height: 200px; }
+  [data-edit] { outline: none; }
+
+  .stage {
+    position: relative; width: 1200px; zoom: calc(1 / 3);
+    background: #000; overflow: hidden;
+    font-family: 'Poppins', 'HarmonyOS Sans SC', sans-serif;
+    color: #fff;
+  }
+  body.size-pop .stage { height: 1200px; }
+  body.size-web .stage { height: 600px; }
+
+  .abs { position: absolute; }
+
+  /* 点阵纹理：设计稿原样复刻（横图旋转 -90 平铺竖幅，hard-light 压在黑底上） */
+  .texture { display: flex; align-items: center; justify-content: center; mix-blend-mode: hard-light; }
+  .texture > div { transform: rotate(-90deg); flex: none; }
+  .texture img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .coin { border-radius: 50%; overflow: hidden; }
+  .coin img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .glow { mix-blend-mode: plus-lighter; }
+  .glow img { width: 100%; height: 100%; display: block; }
+
+  .logo { display: flex; align-items: center; }
+  .logo img { display: block; height: 100%; aspect-ratio: 43.61 / 50; }
+  .logo .word { height: 57%; aspect-ratio: 147.69 / 28.59; margin-left: 11px; }
+
+  /* 币名块 + 时间行：同一竖排容器，名称折行时时间自动下移（与设计 auto-layout 同构） */
+  .head { display: flex; flex-direction: column; }
+  .cname { display: flex; flex-direction: column; gap: 32px; }
+  .cname .ticker { font-weight: 700; line-height: 0.9; color: #fff; overflow-wrap: break-word;
+                   text-box: trim-both cap alphabetic; }
+  .cname .full { font-weight: 400; line-height: 1; color: #01e0e0; overflow-wrap: break-word;
+                 text-box: trim-both cap alphabetic; }
+
+  .timerow { display: flex; align-items: center; gap: 16px; }
+  .timerow img { width: 24px; height: 24px; display: block; }
+  .timerow .t { font-family: 'Alexandria', sans-serif; font-weight: 400; font-size: 30px;
+                line-height: 1; white-space: nowrap; }
+
+  .subtitle { font-weight: 400; line-height: 1.28; transform: translateY(-50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage"></div>
+
+<script src="../../shared/time.js"></script>
+<script>
+const A = '../../../assets/airdrop/';
+const SHARED = '../../../assets/listing/figma/_shared/';
+
+const LAYOUTS = {
+  pop: {
+    texture: { x: -400, y: 0, w: 2134, h: 1200, opacity: 0.4, imgOpacity: 0.6 },
+    photo: { src: 'parachute-pop.png', x: 497, y: -50, w: 949, h: 1150 },
+    coin: { x: 560, y: 547, d: 485 },
+    glow: { x: 560, y: 547, w: 486, h: 484 },
+    head: { x: 64, y: 203, w: 1072, gap: 80, ticker: 106, full: 56 },
+    subtitle: { x: 64, y: 1118, size: 48 },
+    logo: { x: 64, y: 64, h: 50 },
+  },
+  web: {
+    photo: { src: 'parachute-web.png', x: 760, y: -82, w: 513, h: 621 },
+    coin: { x: 794, y: 239, d: 262 },
+    glow: { x: 794, y: 239, w: 263, h: 262 },
+    head: { x: 60, y: 80, w: 1072, gap: 40, ticker: 106, full: 48 },
+    subtitle: { x: 60, y: 433.5, size: 30 },
+    logo: { x: 60, y: 485, h: 54 },
+  },
+};
+
+window.renderPoster = function (d) {
+  const size = document.body.className.replace('size-', '') || 'pop';
+  const L = LAYOUTS[size];
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  const el = (cls, style, html) => {
+    const n = document.createElement('div');
+    n.className = cls;
+    Object.assign(n.style, style);
+    if (html !== undefined) n.innerHTML = html;
+    stage.appendChild(n);
+    return n;
+  };
+  const px = (v) => v + 'px';
+
+  if (L.texture) {
+    const t = L.texture;
+    el('texture abs', { left: px(t.x), top: px(t.y), width: px(t.w), height: px(t.h), opacity: t.opacity },
+      `<div style="width:${t.h}px;height:${t.w}px"><img src="${A}texture.png" style="opacity:${t.imgOpacity}"></div>`);
+  }
+  el('photo abs', { left: px(L.photo.x), top: px(L.photo.y), width: px(L.photo.w), height: px(L.photo.h) },
+    `<img src="${A}${L.photo.src}">`);
+
+  const coin = el('coin abs', { left: px(L.coin.x), top: px(L.coin.y), width: px(L.coin.d), height: px(L.coin.d) });
+  coin.innerHTML = `<img src="${d.coinIcon || A + 'coin.png'}">`;
+  el('glow abs', { left: px(L.glow.x), top: px(L.glow.y), width: px(L.glow.w), height: px(L.glow.h) },
+    `<img src="${A}glow.svg">`);
+
+  const head = el('head abs', { left: px(L.head.x), top: px(L.head.y), width: px(L.head.w), gap: px(L.head.gap) },
+    `<div class="cname">
+       <div class="ticker" data-edit="ticker" style="font-size:${L.head.ticker}px"></div>
+       <div class="full" data-edit="name" style="font-size:${L.head.full}px"></div>
+     </div>
+     <div class="timerow"><img src="${SHARED}calendar.svg"><span class="t"></span></div>`);
+  head.querySelector('.ticker').innerText = d.ticker;
+  head.querySelector('.full').innerText = d.name;
+  head.querySelector('.t').textContent = PosterTime.display(d.datetimeUtc, d.lang);
+
+  const sub = el('subtitle abs', { left: px(L.subtitle.x), top: px(L.subtitle.y), fontSize: px(L.subtitle.size) });
+  sub.dataset.edit = 'subtitle';
+  sub.innerText = d.subtitle;
+
+  el('logo abs', { left: px(L.logo.x), top: px(L.logo.y), height: px(L.logo.h) },
+    `<img src="${SHARED}logo-icon.svg"><img class="word" src="${SHARED}logo-word.svg">`);
+};
+</script>
+<script src="../_shared/poster-kit.js"></script>
+</body>
+</html>

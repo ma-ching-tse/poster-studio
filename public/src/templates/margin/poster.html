@@ -1,0 +1,140 @@
+<!doctype html>
+<!-- 增链海报（BitMart Adds X on Isolated Margin）— Figma 节点 62:4315。
+     双画布：pop 1200×1200 / web 1200×600。
+     标题固定三行（白/青/白，中行是币种代码）；副标题 = 青色高亮 + 白色正文两段直编。
+     币面（coin.png）整圆可替换：金属圈合成在链条图里。 -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('../../../assets/fonts/poppins.css');
+  @import url('../../../assets/fonts/harmony.css');
+
+  html, body { margin: 0; overflow: hidden; }
+  body { background: #000; }
+  body.size-pop { width: 400px; height: 400px; }
+  body.size-web { width: 400px; height: 200px; }
+  [data-edit] { outline: none; }
+
+  .stage {
+    position: relative; width: 1200px; zoom: calc(1 / 3);
+    background: #000; overflow: hidden;
+    font-family: 'Poppins', 'HarmonyOS Sans SC', sans-serif;
+    color: #fff;
+  }
+  body.size-pop .stage { height: 1200px; }
+  body.size-web .stage { height: 600px; }
+
+  .abs { position: absolute; }
+
+  .texture { display: flex; align-items: center; justify-content: center; mix-blend-mode: hard-light; }
+  .texture > div { transform: rotate(-90deg); flex: none; }
+  .texture img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .coin { border-radius: 50%; overflow: hidden; }
+  .coin img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .glow { mix-blend-mode: plus-lighter; }
+  .glow img { width: 100%; height: 100%; display: block; }
+
+  .logo { display: flex; align-items: center; }
+  .logo img { display: block; height: 100%; aspect-ratio: 43.61 / 50; }
+  .logo .word { height: 57%; aspect-ratio: 147.69 / 28.59; margin-left: 11px; }
+
+  .title { display: flex; flex-direction: column; font-weight: 700; }
+  .title div { line-height: 1; overflow-wrap: break-word; text-box: trim-both cap alphabetic; }
+  .title .hl { color: #01e0e0; }
+
+  .subtitle { font-weight: 400; line-height: 1.28; }
+  .subtitle .hl { color: #01e0e0; }
+  .subtitle span { display: inline; }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage"></div>
+
+<script>
+const A = '../../../assets/margin/';
+const SHARED = '../../../assets/listing/figma/_shared/';
+
+const LAYOUTS = {
+  pop: {
+    texture: { x: -400, y: 40, w: 2134, h: 1200, opacity: 0.3, imgOpacity: 0.6 },
+    grad: true, // 设计稿 Rectangle 346273638：左上角向内的压暗渐变
+    photo: { src: 'chain-pop.png', x: 564, y: 185, w: 570, h: 1100 },
+    coin: { x: 620, y: 587, w: 458, h: 451 },
+    glow: { x: 620, y: 587, w: 458, h: 451 },
+    title: { x: 64, y: 172, w: 1080, size: 100, gap: 30 },
+    subtitle: { x: 64, bottom: 80, w: 560, size: 38 },
+    logo: { x: 63, y: 64, h: 50 },
+  },
+  web: {
+    texture: { x: -5, y: -1, w: 1204, h: 677, opacity: 0.3, imgOpacity: 0.6 },
+    photo: { src: 'chain-web.png', x: 742, y: -101, w: 392, h: 756 },
+    coin: { x: 781, y: 175, w: 314, h: 310 },
+    glow: { x: 781, y: 175, w: 314, h: 310 },
+    title: { x: 59, y: 79, w: 648, size: 60, gap: 18 },
+    subtitle: { x: 59, top: 79 + 60 * 3 + 18 * 2 + 48, w: 648, size: 30 }, // 标题块下 gap 48
+    logo: { x: 60, y: 485, h: 44 },
+  },
+};
+
+window.renderPoster = function (d) {
+  const size = document.body.className.replace('size-', '') || 'pop';
+  const L = LAYOUTS[size];
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  const el = (cls, style, html) => {
+    const n = document.createElement('div');
+    n.className = cls;
+    Object.assign(n.style, style);
+    if (html !== undefined) n.innerHTML = html;
+    stage.appendChild(n);
+    return n;
+  };
+  const px = (v) => v + 'px';
+
+  if (L.texture) {
+    const t = L.texture;
+    el('texture abs', { left: px(t.x), top: px(t.y), width: px(t.w), height: px(t.h), opacity: t.opacity },
+      `<div style="width:${t.h}px;height:${t.w}px"><img src="${A}texture.png" style="opacity:${t.imgOpacity}"></div>`);
+  }
+  if (L.grad) el('abs', {
+    inset: '0',
+    background: 'linear-gradient(226.009deg, rgb(0,0,0) 3.32%, rgba(0,0,0,0) 51.86%)',
+  });
+
+  el('photo abs', { left: px(L.photo.x), top: px(L.photo.y), width: px(L.photo.w), height: px(L.photo.h) },
+    `<img src="${A}${L.photo.src}">`);
+
+  const coin = el('coin abs', { left: px(L.coin.x), top: px(L.coin.y), width: px(L.coin.w), height: px(L.coin.h) });
+  coin.innerHTML = `<img src="${d.coinIcon || A + 'coin.png'}">`;
+  el('glow abs', { left: px(L.glow.x), top: px(L.glow.y), width: px(L.glow.w), height: px(L.glow.h) },
+    `<img src="${A}glow.svg">`);
+
+  const title = el('title abs', {
+    left: px(L.title.x), top: px(L.title.y), width: px(L.title.w),
+    fontSize: px(L.title.size), gap: px(L.title.gap),
+  }, `<div data-edit="titleTop"></div>
+      <div class="hl" data-edit="ticker"></div>
+      <div data-edit="titleBottom"></div>`);
+  title.children[0].innerText = d.titleTop;
+  title.children[1].innerText = d.ticker;
+  title.children[2].innerText = d.titleBottom;
+
+  const subStyle = { left: px(L.subtitle.x), width: px(L.subtitle.w), fontSize: px(L.subtitle.size) };
+  if (L.subtitle.bottom !== undefined) subStyle.bottom = px(L.subtitle.bottom);
+  else subStyle.top = px(L.subtitle.top);
+  const sub = el('subtitle abs', subStyle,
+    `<span class="hl" data-edit="subHighlight"></span><span data-edit="subText"></span>`);
+  sub.children[0].innerText = d.subHighlight;
+  sub.children[1].innerText = d.subText;
+
+  el('logo abs', { left: px(L.logo.x), top: px(L.logo.y), height: px(L.logo.h) },
+    `<img src="${SHARED}logo-icon.svg"><img class="word" src="${SHARED}logo-word.svg">`);
+};
+</script>
+<script src="../_shared/poster-kit.js"></script>
+</body>
+</html>

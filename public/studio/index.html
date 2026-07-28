@@ -126,12 +126,35 @@
   main { flex: 1; display: grid; place-items: center; overflow: hidden; padding: 24px; }
   #stage { border: 1px solid var(--color-border); border-radius: 4px; }
   iframe { border: 0; display: block; }
+  /* —— 画廊页（产品线横向并排成列，卡片在列内纵排；#/t/<id> 进入生成器）—— */
+  #gallery { flex: 1; overflow: auto; padding: 32px 40px; }
+  #lines { display: flex; align-items: flex-start; gap: 40px; margin-top: 28px; }
+  .line { flex: none; }
+  .line-title { font-size: 12px; font-weight: 400; color: var(--color-secondary); margin-bottom: 12px; }
+  .cards { display: flex; flex-direction: column; gap: 16px; }
+  .card {
+    width: 220px; cursor: pointer;
+    background: var(--color-bgline2);
+    border: 1px solid var(--color-border); border-radius: 16px;
+    overflow: hidden;
+    transition: border-color var(--motion-exit);
+  }
+  .card:hover { border-color: var(--color-brand); }
+  .thumb { overflow: hidden; background: var(--color-bg); pointer-events: none; }
+  .card-name { padding: 10px 12px; font-size: 13px; font-weight: 500; }
+  body.in-studio #gallery { display: none; }
+  body:not(.in-studio) aside, body:not(.in-studio) main { display: none; }
+  .aside-head { display: flex; align-items: center; gap: 8px; }
+  .aside-head .label-btn { margin-left: 0; flex: none; }
 </style>
 </head>
 <body>
+  <div id="gallery"><h1>Poster Studio</h1><div id="lines"></div></div>
   <aside>
-    <h1>Poster Studio</h1>
-    <div class="group"><label>模板</label><div class="seg" id="template-seg"></div></div>
+    <div class="aside-head">
+      <button id="back" class="label-btn" title="返回画廊">←</button>
+      <h1 id="studio-title">Poster Studio</h1>
+    </div>
     <div class="group"><label>尺寸</label><div class="seg" id="size-seg"></div></div>
     <div id="field-groups"></div>
     <button id="import" class="ghost">导入提需</button>

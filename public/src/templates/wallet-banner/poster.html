@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Wallet 活动 Banner — 按 Figma 稿 5MfOHRZJyeSfFbwSLRzUEv 节点 1580:15896（dark）/ 1580:15902（light）制作。
+     画布 700×224，设计即 1:1，不缩放。
+     两个形态：cta 有文字出绿色按钮行；清空 cta 则按钮占位整体移除，
+     文字块靠 top:50% + translateY(-50%) 自动回到垂直居中。 -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('../../../assets/fonts/alexandria.css');
+  @import url('../../../assets/fonts/harmony.css');
+
+  html, body { margin: 0; overflow: hidden; } /* headless Chrome 滚动条会占视口（KOL 教训） */
+  body { width: 700px; height: 224px; }
+  [data-edit] { outline: none; }
+  .stage {
+    position: relative; width: 700px; height: 224px; overflow: hidden;
+    /* 拉丁 Alexandria；中日/繁体/西里尔落到 HarmonyOS Sans SC（自托管） */
+    font-family: 'Alexandria', 'HarmonyOS Sans SC', sans-serif;
+  }
+
+  /* 日夜配色：主题只换 stage 上的类，四个值全部走变量 */
+  .stage.dark { --bg: #161616; --title: #ffffff; --sub: #b0b0b0; --cta: #a2fd48; }
+  .stage.light { --bg: #f3f3f3; --title: #161616; --sub: #757575; --cta: #3bb900; }
+  .stage { background: var(--bg); }
+
+  /* 文字块：左 32，垂直居中；砍掉按钮行后剩余内容自动回中 */
+  .title-block {
+    position: absolute; left: 32px; top: 50%; transform: translateY(-50%);
+    width: 376px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  }
+  .title {
+    font-weight: 600; font-size: 28px; line-height: 1.1;
+    text-transform: capitalize; color: var(--title); width: 100%;
+  }
+  .subtitle {
+    font-weight: 300; font-size: 20px; line-height: 1.1; letter-spacing: -0.4px;
+    text-transform: capitalize; color: var(--sub); width: 100%;
+  }
+  .cta { display: flex; align-items: center; gap: 2px; padding: 10px 0; }
+  .cta.off { display: none; }
+  .cta-text {
+    font-weight: 500; font-size: 24px; line-height: 1.1; letter-spacing: -0.48px;
+    text-transform: capitalize; color: var(--cta); white-space: nowrap;
+  }
+  .cta-arrow { width: 15.63px; height: 15.63px; display: flex; align-items: center; justify-content: center; }
+  .cta-arrow img { width: 12.55px; height: 12.55px; transform: rotate(45deg); display: block; }
+
+  /* 卡片手持图：设计位 left 405 / top 32（444-39），底部越界由 stage 裁切 */
+  .card { position: absolute; left: 405px; top: 32px; width: 254px; height: 384px; }
+</style>
+</head>
+<body>
+<div class="stage dark" id="stage">
+  <div class="title-block">
+    <div class="title" data-edit="title"></div>
+    <div class="subtitle" data-edit="subtitle"></div>
+    <div class="cta" id="cta">
+      <span class="cta-text" id="cta-text"></span>
+      <span class="cta-arrow"><img id="cta-arrow" src="../../../assets/wallet/arrow-dark.svg" alt=""></span>
+    </div>
+  </div>
+  <img class="card" src="../../../assets/wallet/card.png" alt="">
+</div>
+
+<script>
+window.renderPoster = function (d) {
+  const theme = d.theme === 'light' ? 'light' : 'dark';
+  const stage = document.getElementById('stage');
+  stage.className = 'stage ' + theme;
+  document.getElementById('cta-arrow').src = '../../../assets/wallet/arrow-' + theme + '.svg';
+  document.querySelector('[data-edit="title"]').innerText = d.title;
+  document.querySelector('[data-edit="subtitle"]').innerText = d.subtitle;
+  const cta = String(d.cta ?? '').trim();
+  document.getElementById('cta').classList.toggle('off', !cta);
+  document.getElementById('cta-text').innerText = cta;
+};
+</script>
+<script src="../_shared/poster-kit.js"></script>
+</body>
+</html>

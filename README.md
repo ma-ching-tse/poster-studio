@@ -20,7 +20,7 @@ npm run dev
 ## 结构
 
 - `public/studio/` — 控制台 UI（index.html + app.js + zip.js）
-- `public/src/templates/` — listing / savings 海报模板与布局数据
+- `public/src/templates/` — 海报模板与布局数据：listing / savings（恢复自部署）+ airdrop 空投 / teaser 预热 / margin 增链 / discovery BM Discovery（2026-07-28 按 Figma 稿补做，节点 62:4314–4317）。新模板的币面（`assets/<模板>/coin.png`）是整圆可替换面，上传图标即覆盖
 - `public/src/shared/` — brief 校验、时间格式化等共享逻辑
 - `public/assets/` — Figma 导出素材、Alexandria 自托管字体
 - `data/templates.json` — 模板 registry（字段、语言、标题文案、fixture）
