@@ -1,0 +1,8 @@
+/* HarmonyOS Sans SC — 中日文字体（自托管，来源 npm @lobehub/webfont-harmony-sans-sc 全量版）。
+   汉字/日文汉字/假名/繁体/西里尔/拉丁全覆盖（29063 字形），拉丁优先仍用 Poppins。
+   设计用的 300/600/800 字重由 CSS 权重匹配自动落到最近档（300→400、600→700、800→900）。
+   许可证见同目录 HarmonyOS-Sans-LICENSE.txt（华为免费商用）。 */
+@font-face { font-family: 'HarmonyOS Sans SC'; font-style: normal; font-weight: 400; font-display: swap; src: url('harmony-sc-400.woff2') format('woff2'); }
+@font-face { font-family: 'HarmonyOS Sans SC'; font-style: normal; font-weight: 500; font-display: swap; src: url('harmony-sc-500.woff2') format('woff2'); }
+@font-face { font-family: 'HarmonyOS Sans SC'; font-style: normal; font-weight: 700; font-display: swap; src: url('harmony-sc-700.woff2') format('woff2'); }
+@font-face { font-family: 'HarmonyOS Sans SC'; font-style: normal; font-weight: 900; font-display: swap; src: url('harmony-sc-900.woff2') format('woff2'); }

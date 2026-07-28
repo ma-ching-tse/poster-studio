@@ -1,0 +1,181 @@
+<!doctype html>
+<!-- Savings 利率海报 — 按 Figma 稿 rZ4oMllhlmkSm2aA1w0P6U 节点 14:2064 制作。
+     画布 1200×1200：stage 按设计 px 排版，zoom 1/3 落到 400×400 视口（@3x 导出回 1200）。
+     表格行高 = 每个利率行 123px，分级利率（savings 含 \n）按行数纵向扩展。 -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* 字体自托管（assets/fonts），http 预览与 file:// 导出同路径可达，不走 CDN——
+     镜像宕机会让出图静默退回系统字。拉丁 Poppins，中日/繁体/西里尔 HarmonyOS Sans SC */
+  @import url('../../../assets/fonts/poppins.css');
+  @import url('../../../assets/fonts/harmony.css');
+
+  html, body { margin: 0; overflow: hidden; } /* headless Chrome 滚动条会占视口（KOL 教训） */
+  body { width: 400px; height: 400px; background: #000; }
+  [data-edit] { outline: none; }
+  .stage {
+    position: relative; width: 1200px; height: 1200px; zoom: calc(1 / 3);
+    background: #000; overflow: hidden;
+    /* 拉丁走 Poppins，中日/繁体/西里尔等落到 HarmonyOS Sans SC（自托管，全覆盖） */
+    font-family: 'Poppins', 'HarmonyOS Sans SC', sans-serif;
+    color: #fff;
+  }
+
+  /* 背景：点阵 + 右下亮心的径向压暗（Figma 14:2065/14:2066 重建） */
+  .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, #4a4a4a 1.5px, transparent 1.6px);
+    background-size: 14px 14px;
+  }
+  .shade {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle 1335px at 1225px 892px, rgba(0,0,0,0.4) 0%, #000 100%);
+  }
+
+  .title {
+    position: absolute; left: 63px; top: 60px; width: 900px;
+    font-weight: 700; font-size: 130px; line-height: 1.1; letter-spacing: -2.6px;
+    white-space: nowrap;
+  }
+
+  /* 币种胶囊（图标压在胶囊左缘外 21px） */
+  .coin { position: absolute; left: 85px; top: 314px; height: 106px; }
+  .coin-pill {
+    display: flex; align-items: center; height: 106px;
+    padding: 0 44px 0 101px; box-sizing: border-box;
+    border: 4px solid #393939; border-radius: 90px;
+    background: linear-gradient(112.68deg, #393939 30.9%, #1b1b1b 96.1%);
+    font-weight: 700; font-size: 48px; line-height: 1.2; color: #d9d9d9;
+  }
+  .coin-icon { position: absolute; left: -21px; top: 0; width: 107px; height: 107px; }
+  /* 圆形裁切：兜住方底切图（如 xrp）和运营上传的任意方图 */
+  .coin-icon img { width: 100%; height: 100%; display: block; border-radius: 50%; }
+
+  /* 钱包 3D + 青色光晕 */
+  .wallet { position: absolute; left: 796px; top: 104px; width: 316px; height: 316px; }
+  .wallet .glow { position: absolute; left: -32px; top: -12px; width: 427px; height: 427px; }
+  .wallet .img { position: absolute; inset: 0; width: 316px; height: 316px; }
+
+  /* 利率表：76px 表头 + 每利率行 123px；列宽 313/443/324（设计 px）。
+     VIP 列整列的 #FFB600 径向光晕（设计稿 Rectangle 346273441，峰值 alpha 0.12）
+     用多层背景裁到右列区域实现，随行数增减纵向自适应 */
+  .table {
+    position: absolute; left: 60px; top: 451px; width: 1078px;
+    border: 0.6px solid #5d5d5d; border-radius: 20px;
+    background:
+      radial-gradient(ellipse 182.7% 171.9% at 58.2% -71.9%,
+        rgba(255,182,0,0.12) 0%, rgba(255,182,0,0) 100%) 756px 0 / 322px 100% no-repeat,
+      #181818;
+    overflow: hidden;
+  }
+  .tr { display: grid; grid-template-columns: 313px 443px 322px; }
+  .tr + .tr { border-top: 0.6px solid #5d5d5d; }
+  /* 表头渐变：设计稿 Rectangle 346273442（黑→#666 斜向），换算到 76px 可视条内 */
+  .th { height: 76px; background: linear-gradient(168.5deg, #1a1a1a, #4a4a4a); }
+  .td, .th > div { display: flex; align-items: center; justify-content: center; text-align: center; }
+  .th > div { font-weight: 300; font-size: 28px; }
+  .th .vip { background: #ffb600; color: #000; font-weight: 500; border-radius: 20px 20px 0 0; }
+  .col-term { border-right: 0.6px solid #5d5d5d; }
+  .col-vip { border-left: 0.6px solid #5d5d5d; } /* 底色由 .table 的 VIP 列背景层给 */
+  .td { font-weight: 500; font-size: 28px; line-height: 36px; }
+  .subs { display: flex; flex-direction: column; }
+  .subs .td { flex: 1; }
+  .subs .td + .td { border-top: 0.6px solid #5d5d5d; }
+  .col-vip.td { font-size: 42px; line-height: 48px; color: #ffb600; }
+
+  /* BitMart logo */
+  .logo { position: absolute; left: 70px; top: 1064px; height: 65px; display: flex; align-items: center; }
+  .logo .mark { width: 55.9px; height: 65px; }
+  .logo .text { width: 189.2px; height: 37.2px; margin-left: 15px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="dots"></div>
+  <div class="shade"></div>
+
+  <div class="title" data-edit="title"></div>
+
+  <div class="coin">
+    <div class="coin-pill"><span data-edit="coinSymbol" id="coin-symbol"></span></div>
+    <div class="coin-icon"><img id="coin-icon" alt=""></div>
+  </div>
+
+  <div class="wallet">
+    <img class="glow" src="../../../assets/savings/glow.svg" alt="">
+    <img class="img" src="../../../assets/savings/wallet.png" alt="">
+  </div>
+
+  <div class="table" id="table">
+    <div class="tr th" id="thead">
+      <div class="col-term"></div>
+      <div></div>
+      <div class="vip"></div>
+    </div>
+  </div>
+
+  <div class="logo">
+    <img class="mark" src="../../../assets/savings/logo-mark.svg" alt="">
+    <img class="text" src="../../../assets/savings/logo-text.svg" alt="">
+  </div>
+</div>
+
+<script>
+const COIN_ICON_BASE = '../../../assets/savings/coins/';
+let customIcon = ''; // 运营上传的自定义图标；非空时直编币种代码不再自动换图
+
+// 表头固定文案按 lang 切换（运营对照表 2026-07-10），没有的语言回落 EN
+const L10N = {
+  'EN':    { term: 'Term', savings: 'Savings', vip: 'VIP Savings' },
+  'zh-CN': { term: '期限', savings: '收益', vip: 'VIP 收益' },
+  'JA':    { term: '期間', savings: 'セービング', vip: 'VIP セービング' },
+};
+
+function coinIconSrc(d) {
+  if (d.coinIcon) return d.coinIcon; // 运营上传的 data URL 优先
+  return COIN_ICON_BASE + String(d.coinSymbol || '').trim().toLowerCase() + '.png';
+}
+
+window.renderPoster = function (d) {
+  customIcon = d.coinIcon || '';
+  const t = L10N[d.lang] || L10N.EN;
+  const th = document.getElementById('thead');
+  th.children[0].innerText = t.term;
+  th.children[1].innerText = t.savings;
+  th.children[2].innerText = t.vip;
+  document.querySelector('[data-edit="title"]').innerText = d.title;
+  document.getElementById('coin-symbol').innerText = d.coinSymbol;
+  const icon = document.getElementById('coin-icon');
+  icon.onerror = () => { icon.style.visibility = 'hidden'; };
+  icon.style.visibility = '';
+  icon.src = coinIconSrc(d);
+
+  const table = document.getElementById('table');
+  table.querySelectorAll('.tr:not(.th)').forEach(el => el.remove());
+  d.rows.forEach((row, i) => {
+    const lines = String(row.savings).split('\n');
+    const tr = document.createElement('div');
+    tr.className = 'tr';
+    tr.style.height = (lines.length * 123) + 'px';
+    tr.innerHTML =
+      '<div class="td col-term" data-edit="rows.' + i + '.term">' + row.term + '</div>' +
+      '<div class="subs">' + lines.map((t, n) =>
+        '<div class="td" data-edit="rows.' + i + '.savings@' + n + '">' + t + '</div>').join('') +
+      '</div>' +
+      '<div class="td col-vip" data-edit="rows.' + i + '.vip">' + row.vip + '</div>';
+    table.appendChild(tr);
+  });
+};
+
+// 直编币种代码时同步换图标（只动 DOM 不重渲染，不打断光标）
+document.getElementById('coin-symbol').addEventListener('input', function () {
+  if (customIcon) return;
+  const icon = document.getElementById('coin-icon');
+  icon.style.visibility = '';
+  icon.src = COIN_ICON_BASE + this.innerText.trim().toLowerCase() + '.png';
+});
+</script>
+<script src="../_shared/poster-kit.js"></script>
+</body>
+</html>

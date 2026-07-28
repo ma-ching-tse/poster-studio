@@ -1,0 +1,293 @@
+<!doctype html>
+<!-- 上币海报 — 按 Figma 稿 rZ4oMllhlmkSm2aA1w0P6U 节点 29:17711 制作（2026-07-15 定稿）。
+     双画布：pop 1200×1200 / web 1200×600，stage 按设计 px 排版，zoom 1/3 落到
+     400×400 / 400×200 视口（@3x 导出回原尺寸）。
+     币数 1-12 每档一套固定坐标/字号，查 layouts.js（生成文件）；
+     卡片/光环/logo/日历是 Figma 导出的 SVG（assets/listing/figma/）。
+     时间不直编：单一 UTC 值（datetimeUtc）按语言派生显示（zh +8），规则在 shared/time.js。 -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* 字体自托管（assets/fonts），http 预览与 file:// 导出同路径可达，不走 CDN——
+     镜像宕机会让出图静默退回系统字。拉丁 Poppins，中日/繁体/西里尔 HarmonyOS Sans SC */
+  @import url('../../../assets/fonts/poppins.css');
+  @import url('../../../assets/fonts/harmony.css');
+
+  html, body { margin: 0; overflow: hidden; } /* headless Chrome 滚动条会占视口（KOL 教训） */
+  body { background: #000; }
+  body.size-pop { width: 400px; height: 400px; }
+  body.size-web { width: 400px; height: 200px; }
+  [data-edit] { outline: none; }
+
+  .stage {
+    position: relative; width: 1200px; zoom: calc(1 / 3);
+    background: #000; overflow: hidden;
+    /* 拉丁走 Poppins，中日/繁体/西里尔等落到 HarmonyOS Sans SC（自托管，全覆盖） */
+    font-family: 'Poppins', 'HarmonyOS Sans SC', sans-serif;
+    color: #fff;
+  }
+  body.size-pop .stage { height: 1200px; }
+  body.size-web .stage { height: 600px; }
+
+  /* 背景纹理：Ringo 2026-07-15 给的成品亮度版（画布同尺寸 1200×1200 / 1200×600），
+     原图直出——旧的 hard-light + 双层透明度压暗配方随暗图一并作废 */
+  .bg { position: absolute; inset: 0; }
+  .bg img { width: 100%; height: 100%; object-fit: cover; }
+
+  .abs { position: absolute; }
+
+  /* logo：图标 + 字标，内部比例按 pop 版 203×50 基准，随 bbox 高度缩放。
+     导出 SVG 根节点是 width=100%（无固有宽度），必须显式给 aspect-ratio */
+  .logo { display: flex; align-items: center; }
+  .logo img { display: block; height: 100%; aspect-ratio: 43.61 / 50; }
+  .logo .word { height: 57%; aspect-ratio: 147.69 / 28.59; margin-left: 11px; }
+
+  /* 设计稿标题节点是 leading-trim cap-height（框高=字面高）；text-box 对齐同一锚点，
+     旧内核不支持时忽略，只有几 px 的垂直偏差 */
+  .title { white-space: pre-line; text-box: trim-both cap alphabetic; }
+
+  .timerow { display: flex; align-items: center; gap: 16px; }
+  .timerow img { width: 24px; height: 24px; display: block; }
+  .timerow .t { font-weight: 400; line-height: 1; white-space: nowrap; }
+
+  .ring img { width: 100%; height: 100%; display: block; }
+
+  /* 层序按设计稿分两种构图（z 值由 renderPoster 按几何判定）：
+     压边构图（1/2 币，圈心在卡外）：圈 z10 在玻璃卡 z20 之下，圈顶透出模糊光晕；
+     卡内构图（3+ 币，圈心在卡内）：圈/图标 z30 摆在卡面上，保持清晰；文字恒最前 z40 */
+  .ring, .icon { z-index: 10; }
+  /* 毛玻璃卡片（Figma GLASS 效果的 CSS 近似）：SVG path 裁形 +
+     #2C2C2C@20% 填充 + backdrop blur（半径逐帧来自设计稿，见 layouts.js cardBlur）；
+     折射/景深复刻不了，肉眼主体是模糊+半透明 */
+  .card { background: rgba(44, 44, 44, 0.2); z-index: 20; }
+  /* 玻璃边缘高光（Figma GLASS lightAngle -45/intensity 0.8；rdev/liquid-glass-react 的
+     双层描边渐变思路）：SVG 按卡片 path 描边 135° 白渐变，screen 混合在黑底上做加法提亮 */
+  .card-light { z-index: 21; mix-blend-mode: screen; pointer-events: none; }
+  .card-light svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+  .icon { border-radius: 50%; overflow: hidden; background: #101010; }
+  .icon img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+  .cname { display: flex; flex-direction: column; z-index: 40; }
+  .cname .ticker { color: #01e0e0; overflow-wrap: break-word; }
+  .cname .full { color: #fff; overflow-wrap: break-word; }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage"></div>
+
+<script src="layouts.js"></script>
+<script src="../../shared/time.js"></script>
+<script>
+// —— 液态玻璃滤镜（移植 rdev/liquid-glass-react 的方案，vanilla 化）——
+// 原理：Canvas 按圆角矩形 SDF 生成位移图 → SVG 滤镜对 R/G/B 三通道做略微不同
+// scale 的 feDisplacementMap（自带色散）→ CSS filter: url() 叠在 backdrop blur 之上，
+// 让模糊背景在卡片边缘产生折射扭曲。补的是 Figma GLASS 里 CSS 做不到的折射/色散分量。
+const glassDefs = document.createElement('div');
+glassDefs.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+document.addEventListener('DOMContentLoaded', () => document.body.appendChild(glassDefs));
+
+const glassCache = new Map(); // "w×h×disp" -> filterId（直编每敲一键就重渲，必须缓存）
+function makeDisplacementMap(w, h) {
+  const smooth = (a, b, t) => { t = Math.max(0, Math.min(1, (t - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const sdf = (x, y) => { // rounded-rect SDF（lib 同款归一化参数）
+    const qx = Math.abs(x) - 0.3 + 0.6, qy = Math.abs(y) - 0.2 + 0.6;
+    return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - 0.6;
+  };
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(w, h);
+  const raw = new Float32Array(w * h * 2);
+  let max = 1;
+  for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i += 2) {
+    const ix = x / w - 0.5, iy = y / h - 0.5;
+    const disp = smooth(0, 1, smooth(0.8, 0, sdf(ix, iy) - 0.15));
+    const dx = (ix * disp + 0.5) * w - x, dy = (iy * disp + 0.5) * h - y;
+    raw[i] = dx; raw[i + 1] = dy;
+    max = Math.max(max, Math.abs(dx), Math.abs(dy));
+  }
+  for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i += 2) {
+    const edge = Math.min(1, Math.min(x, y, w - x - 1, h - y - 1) / 2); // 贴边 2px 渐出，防硬边
+    const r = (raw[i] * edge) / max + 0.5, g = (raw[i + 1] * edge) / max + 0.5;
+    const p = (y * w + x) * 4;
+    img.data[p] = r * 255; img.data[p + 1] = g * 255; img.data[p + 2] = g * 255; img.data[p + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL();
+}
+
+function glassFilter(w, h, disp) {
+  const key = `${w}x${h}-${disp}`;
+  if (glassCache.has(key)) return glassCache.get(key);
+  const id = 'glass-' + glassCache.size;
+  const map = makeDisplacementMap(Math.round(w), Math.round(h));
+  const ab = 2; // aberrationIntensity（lib 默认档）：G/B 通道 scale 递减 5%/10% 产生色散
+  glassDefs.insertAdjacentHTML('beforeend',
+    `<svg width="0" height="0" aria-hidden="true"><defs>
+      <filter id="${id}" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+        <feImage x="0" y="0" width="100%" height="100%" result="MAP" href="${map}" preserveAspectRatio="xMidYMid slice"/>
+        <feColorMatrix in="MAP" type="matrix" values="0.3 0.3 0.3 0 0 0.3 0.3 0.3 0 0 0.3 0.3 0.3 0 0 0 0 0 1 0" result="EDGE_INT"/>
+        <feComponentTransfer in="EDGE_INT" result="EDGE_MASK"><feFuncA type="discrete" tableValues="0 ${ab * 0.05} 1"/></feComponentTransfer>
+        <feOffset in="SourceGraphic" dx="0" dy="0" result="CENTER"/>
+        <feDisplacementMap in="SourceGraphic" in2="MAP" scale="${disp}" xChannelSelector="R" yChannelSelector="B" result="RD"/>
+        <feColorMatrix in="RD" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" result="RC"/>
+        <feDisplacementMap in="SourceGraphic" in2="MAP" scale="${disp * (1 - ab * 0.05)}" xChannelSelector="R" yChannelSelector="B" result="GD"/>
+        <feColorMatrix in="GD" type="matrix" values="0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0" result="GC"/>
+        <feDisplacementMap in="SourceGraphic" in2="MAP" scale="${disp * (1 - ab * 0.1)}" xChannelSelector="R" yChannelSelector="B" result="BD"/>
+        <feColorMatrix in="BD" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0" result="BC"/>
+        <feBlend in="GC" in2="BC" mode="screen" result="GB"/>
+        <feBlend in="RC" in2="GB" mode="screen" result="RGB"/>
+        <feGaussianBlur in="RGB" stdDeviation="${Math.max(0.1, 0.5 - ab * 0.1)}" result="AB_BLUR"/>
+        <feComposite in="AB_BLUR" in2="EDGE_MASK" operator="in" result="EDGE_AB"/>
+        <feComponentTransfer in="EDGE_MASK" result="INV_MASK"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+        <feComposite in="CENTER" in2="INV_MASK" operator="in" result="CENTER_CLEAN"/>
+        <feComposite in="EDGE_AB" in2="CENTER_CLEAN" operator="over"/>
+      </filter></defs></svg>`);
+  glassCache.set(key, id);
+  return id;
+}
+
+window.renderPoster = function (d) {
+  const size = document.body.className.replace('size-', '') || 'pop';
+  const count = Math.min(Math.max(d.coins.length, 1), 12);
+  const L = window.LISTING_LAYOUTS[size + '_' + count];
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  const el = (cls, style, html) => {
+    const n = document.createElement('div');
+    n.className = cls;
+    Object.assign(n.style, style);
+    if (html !== undefined) n.innerHTML = html;
+    stage.appendChild(n);
+    return n;
+  };
+  const px = (v) => v + 'px';
+  const A = '../../../assets/listing/figma/';
+
+  // 背景纹理 + logo
+  el('bg abs', {}, `<img src="${A}_shared/bg-${size}.png">`);
+  el('logo abs', { left: px(L.logo.x), top: px(L.logo.y), height: px(L.logo.h) },
+    `<img src="${A}_shared/logo-icon.svg"><img class="word" src="${A}_shared/logo-word.svg">`);
+
+  // 标题：两行档把「｜」换成换行（设计稿即两行）；单行档原样保留
+  const title = el('title abs', {
+    left: px(L.title.x), top: px(L.title.y), width: px(L.title.w),
+    fontSize: px(L.title.size), fontWeight: L.title.weight,
+    lineHeight: String(L.title.lh), letterSpacing: px(L.title.tracking),
+  });
+  title.dataset.edit = 'title';
+  title.innerText = L.title.lines === 2 ? String(d.title).replace(/\s*[｜|]\s*/, '\n') : d.title;
+
+  // 时间：datetimeUtc 按语言派生显示（zh-CN/zh-TW +8h），不直编——改侧栏 UTC 输入
+  const timeEl = el('timerow abs', { left: px(L.time.x), top: px(L.time.y) },
+    `<img src="${A}_shared/calendar.svg"><span class="t" style="font-size:${L.time.size}px">` +
+    `${PosterTime.display(d.datetimeUtc, d.lang)}</span>`);
+  // 大标题规则（Ringo 2026-07-15 定）：最多两行——超两行先降字号（2px 一档）装回两行；
+  // 在两行以内但超出设计高度（单行设计折成两行）时，时间行按超出量下移让位。直编实时跟随。
+  // 设计高度基准：支持 text-box trim 的内核 = 设计稿 cap 裁切盒高；不支持 = 行数×行高
+  const designH = CSS.supports('text-box', 'trim-both cap alphabetic')
+    ? L.title.h : L.title.lines * L.title.size * L.title.lh;
+  const layoutTime = () => {
+    const extra = Math.max(0, title.offsetHeight - designH - 2);
+    timeEl.style.top = px(L.time.y + extra);
+  };
+  const lineCount = () => { // Range 行盒计数：不受 cap 裁切/字号影响的精确行数
+    const range = document.createRange();
+    range.selectNodeContents(title);
+    const tops = new Set();
+    for (const r of range.getClientRects()) tops.add(Math.round(r.top / 5));
+    return tops.size;
+  };
+  const fitTitle = () => {
+    let size = L.title.size;
+    title.style.fontSize = px(size);
+    while (lineCount() > 2 && size > 12) {
+      size -= 2;
+      title.style.fontSize = px(size);
+    }
+    layoutTime();
+  };
+  fitTitle();
+  title.addEventListener('input', fitTitle);
+  // Puppeteer 里 setData 先于字体加载完成，行数会按回退字体误测——
+  // 字体就绪后重测（render.js 截图前 await fonts.ready，本回调注册在先，顺序有保证）
+  if (document.fonts) document.fonts.ready.then(fitTitle);
+
+  // 毛玻璃卡片（同帧多卡共用同一 path 形状与滤镜；渲染在币圈之上，见 CSS z 序）。
+  // 位移滤镜必须放进 backdrop-filter 链（blur → url 依序作用于背景）：
+  // Chromium 的 filter 属性不处理 backdrop 合成结果，挂 filter: url() 没有效果——实测过
+  (L.cards || []).forEach((c, k) => {
+    // 玻璃拆两层叠放，不做特性探测——backdrop-filter 里的 SVG 滤镜只有新 Chromium
+    // 渲染支持，旧内核「解析成功但绘制丢弃整条链」（Ringo 的 Chrome 连 blur 都没了）。
+    // 模糊层：纯 blur + 填充，处处可用；位移层：纯 url 采样下层模糊结果做折射，
+    // 支持的内核生效（含 Puppeteer 导出），不支持的自动无视、不伤模糊
+    const box = {
+      left: px(c.x), top: px(c.y), width: px(c.w), height: px(c.h),
+      clipPath: `path('${L.cardPath}')`,
+    };
+    el('card abs', { ...box,
+      backdropFilter: `blur(${L.cardBlur}px)`,
+      webkitBackdropFilter: `blur(${L.cardBlur}px)`,
+    });
+    const disp = el('card card-disp abs', { ...box, background: 'none' });
+    disp.style.backdropFilter = `url(#${glassFilter(c.w, c.h, L.cardDisp)})`;
+    disp.style.webkitBackdropFilter = disp.style.backdropFilter;
+    // 边缘高光（Ringo 2026-07-16 定稿）：双侧受光描边——反光位在左上边缘与右下切角
+    // （渐变两端亮、中段暗），1.5px，无内晕（A/B 后 Ringo 选了干净版）。
+    // stage 每次重建，渐变 id 帧内唯一即可
+    el('card-light abs', { left: px(c.x), top: px(c.y), width: px(c.w), height: px(c.h) },
+      `<svg viewBox="0 0 ${c.w} ${c.h}" preserveAspectRatio="none" fill="none">
+        <defs>
+          <linearGradient id="cl-${k}" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity="0.42"/>
+            <stop offset="0.4" stop-color="#fff" stop-opacity="0.06"/>
+            <stop offset="0.7" stop-color="#fff" stop-opacity="0.15"/>
+            <stop offset="1" stop-color="#fff" stop-opacity="0.55"/>
+          </linearGradient>
+        </defs>
+        <path d="${L.cardPath}" stroke="url(#cl-${k})" stroke-width="1.5"/>
+      </svg>`);
+  });
+
+  // 币：光环 + 图标 + 名称块（ticker/全称直编）。
+  // 圈心落在某张卡内 → 卡内构图，圈/图标提到玻璃之上（z30）保持清晰；
+  // 圈心在卡外（1/2 币压边构图）→ 留在玻璃之下（z10），圈顶透出模糊光晕
+  const inCard = (cx, cy) => (L.cards || []).some((k) =>
+    cx >= k.x && cx <= k.x + k.w && cy >= k.y && cy <= k.y + k.h);
+  d.coins.forEach((coin, i) => {
+    const c = L.coins[Math.min(i, L.coins.length - 1)];
+    const front = inCard(c.ring.x + c.ring.d / 2, c.ring.y + c.ring.d / 2);
+    const z = front ? { zIndex: 30 } : {};
+    el('ring abs', { left: px(c.ring.x), top: px(c.ring.y), width: px(c.ring.d), height: px(c.ring.d), ...z },
+      `<img src="${A}${L.ring}">`);
+    if (c.icon) {
+      const icon = el('icon abs', { left: px(c.icon.x), top: px(c.icon.y), width: px(c.icon.d), height: px(c.icon.d), ...z });
+      if (coin.icon) icon.innerHTML = `<img src="${coin.icon}">`;
+    }
+    const nameStyle = {
+      left: px(c.name.x), width: px(c.name.w), gap: px(c.gap),
+      textAlign: c.align,
+    };
+    // row 模式（文字在图标侧边）：以圆环中心垂直居中，行数变化自适应；
+    // top 模式（文字在图标上/下或卡顶）：固定顶边
+    if (c.name.mode === 'row') {
+      nameStyle.top = px(c.name.cy);
+      nameStyle.transform = 'translateY(-50%)';
+    } else {
+      nameStyle.top = px(c.name.y);
+    }
+    const nm = el('cname abs', nameStyle,
+      `<div class="ticker" data-edit="coins.${i}.ticker" style="font-size:${c.ticker.size}px;` +
+      `font-weight:${c.ticker.weight};letter-spacing:${c.ticker.tracking}px;line-height:${c.ticker.lh}"></div>` +
+      `<div class="full" data-edit="coins.${i}.name" style="font-size:${c.cname.size}px;` +
+      `font-weight:${c.cname.weight};line-height:${c.cname.lh}"></div>`);
+    nm.querySelector('.ticker').innerText = coin.ticker;
+    nm.querySelector('.full').innerText = coin.name;
+  });
+};
+</script>
+<script src="../_shared/poster-kit.js"></script>
+</body>
+</html>

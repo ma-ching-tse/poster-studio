@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="night">
+<head>
+<meta charset="utf-8">
+<title>Poster Studio</title>
+<style>
+  /* Alexandria 自托管（assets/fonts），不依赖外网字体源 */
+  @import url('/assets/fonts/alexandria.css');
+
+  /* BMDS tokens — night mode（控制台固定深色） */
+  :root {
+    --color-primary: #F3F3F3;
+    --color-secondary: #787878;
+    --color-third: #4D4D4D;
+    --btn-text: #1C1E1F;
+    --color-bg: #000000;
+    --color-bgline: #262729;
+    --color-bgline2: #1B1D1F;
+    --color-border: #2C2F32;
+    --color-divider: #2C2F32;
+    --color-brand: #00F8F8;
+    --color-brand-bg: rgba(0, 248, 248, 0.2);
+    --motion-exit: 200ms ease-in-out;
+  }
+  * { box-sizing: border-box; font-family: 'Alexandria', 'PingFang SC', sans-serif; line-height: 1.35; }
+  [hidden] { display: none !important; } /* 显式 display 会盖过 hidden（KOL 教训） */
+  body { margin: 0; height: 100vh; display: flex; background: var(--color-bg); color: var(--color-primary); }
+  aside { width: 260px; flex: none; padding: 16px; border-right: 1px solid var(--color-border);
+          display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+  h1 { font-size: 16px; font-weight: 600; margin: 0; color: var(--color-primary); }
+  #field-groups { display: flex; flex-direction: column; gap: 18px; } /* 与 aside 组间距一致 */
+  .group > label { display: block; font-size: 12px; font-weight: 400; color: var(--color-secondary); margin-bottom: 6px; }
+  .label-btn {
+    margin-left: 8px; padding: 1px 8px;
+    background: var(--color-bgline2); color: var(--color-secondary);
+    border: none; border-radius: 9999px;
+    font-size: 11px; cursor: pointer;
+    transition: opacity var(--motion-exit);
+  }
+  .label-btn:active { opacity: 0.8; }
+  .group { position: relative; }
+  .dropdown {
+    position: absolute; left: 0; top: 24px; z-index: 10;
+    min-width: 148px; padding: 6px;
+    background: var(--color-bgline2);
+    border: 1px solid var(--color-border); border-radius: 12px;
+    display: flex; flex-direction: column;
+  }
+  .dd-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 8px;
+    font-size: 12px; color: var(--color-primary); cursor: pointer;
+  }
+  .dd-item:hover { background: var(--color-bgline); }
+  .dd-item input { accent-color: var(--color-brand); margin: 0; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button {
+    background: var(--color-bgline2); color: var(--color-primary);
+    border: none; border-radius: 9999px; padding: 6px 12px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: opacity var(--motion-exit);
+  }
+  .seg button.active { background: var(--color-brand-bg); color: var(--color-brand); }
+  .seg button:active { opacity: 0.8; }
+  .hint { font-size: 12px; color: var(--color-secondary); line-height: 1.35; }
+  .ghost {
+    height: 32px; padding: 0 16px;
+    background: var(--color-bgline2); color: var(--color-primary);
+    border: 1px solid var(--color-border); border-radius: 9999px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: opacity var(--motion-exit);
+  }
+  .ghost:active { opacity: 0.8; }
+  /* —— 导入提需（brief）确认弹窗 —— */
+  #import-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    display: grid; place-items: center;
+  }
+  .modal-card {
+    width: 640px; max-width: calc(100vw - 48px); max-height: 84vh; overflow-y: auto;
+    background: var(--color-bgline2);
+    border: 1px solid var(--color-border); border-radius: 16px;
+    padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .modal-card h2 { margin: 0; font-size: 14px; font-weight: 600; }
+  #brief-input {
+    min-height: 150px; resize: vertical;
+    background: var(--color-bg); color: var(--color-primary);
+    border: 1px solid var(--color-border); border-radius: 12px;
+    padding: 10px 12px;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  #brief-input:focus { outline: 1px solid var(--color-brand); }
+  #brief-report { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .brief-err { color: #FF5A5A; }
+  .brief-warn { color: #FFB020; }
+  .brief-sum { color: var(--color-secondary); }
+  .brief-table { border-collapse: collapse; width: 100%; }
+  .brief-table th, .brief-table td {
+    border: 1px solid var(--color-border); padding: 6px 8px;
+    text-align: left; font-weight: 400; vertical-align: top; white-space: pre-wrap;
+  }
+  .brief-table th { color: var(--color-secondary); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .modal-actions button {
+    height: 32px; padding: 0 16px;
+    border: none; border-radius: 9999px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: opacity var(--motion-exit);
+    background: var(--color-bgline); color: var(--color-primary);
+  }
+  .modal-actions button.primary { background: var(--color-brand); color: var(--btn-text); }
+  .modal-actions button:active { opacity: 0.8; }
+  .modal-actions button:disabled { background: var(--color-bgline); color: var(--color-third); cursor: not-allowed; }
+  #brief-report a { color: var(--color-brand); }
+  #export {
+    margin-top: auto; height: 40px; padding: 0 20px;
+    background: var(--color-brand); color: var(--btn-text);
+    border: none; border-radius: 9999px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: opacity var(--motion-exit);
+  }
+  #export:active { opacity: 0.8; }
+  #export:disabled { background: var(--color-bgline); color: var(--color-third); cursor: not-allowed; pointer-events: none; }
+  main { flex: 1; display: grid; place-items: center; overflow: hidden; padding: 24px; }
+  #stage { border: 1px solid var(--color-border); border-radius: 4px; }
+  iframe { border: 0; display: block; }
+</style>
+</head>
+<body>
+  <aside>
+    <h1>Poster Studio</h1>
+    <div class="group"><label>模板</label><div class="seg" id="template-seg"></div></div>
+    <div class="group"><label>尺寸</label><div class="seg" id="size-seg"></div></div>
+    <div id="field-groups"></div>
+    <button id="import" class="ghost">导入提需</button>
+    <p class="hint">文本在右侧海报上直接点击编辑。</p>
+    <button id="export">导出</button>
+  </aside>
+  <main><div id="stage"><iframe id="preview"></iframe></div></main>
+
+  <!-- 导入提需：粘贴归一化 brief JSON → 解析报告（脏数据高亮）→ 应用。
+       第二步（TODO）：贴 Lark 链接，服务端拉取 + LLM 归一化产出同一 schema。 -->
+  <div id="import-modal" hidden>
+    <div class="modal-card">
+      <h2>导入提需</h2>
+      <p class="hint">贴 Lark Sheets 提需链接，或直接粘贴 brief JSON（schema 见 src/shared/brief.js）。</p>
+      <textarea id="brief-input" spellcheck="false" placeholder="https://xxx.larksuite.com/sheets/…"></textarea>
+      <div id="brief-report" hidden></div>
+      <div class="modal-actions">
+        <button id="brief-cancel">取消</button>
+        <button id="brief-go" class="primary">解析</button>
+      </div>
+    </div>
+  </div>
+
+<script src="/src/shared/validate.js"></script>
+<script src="/src/shared/brief.js"></script>
+<script src="zip.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

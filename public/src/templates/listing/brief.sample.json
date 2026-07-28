@@ -1,0 +1,27 @@
+{
+  "template": "listing",
+  "source": "合约上币 Lark Sheets · 2026-07-14 股票专区（FIG、IONS、FRMI）",
+  "shared": {
+    "datetimeUtc": "2026-07-14 11:00",
+    "coins": [
+      { "name": "Figma Inc.", "ticker": "FIG", "icon": "" },
+      { "name": "Ionis Pharmaceuticals Inc.", "ticker": "IONS", "icon": "" },
+      { "name": "Fermi Inc.", "ticker": "FRMI", "icon": "" }
+    ]
+  },
+  "langs": {
+    "EN": { "title": "New Listings｜Stock Futures" },
+    "CN": { "title": "合约上新｜股票专区" },
+    "TW": { "title": "合約上新｜股票專區" },
+    "VN": { "title": "Niêm Yết Mới｜Stock Futures" },
+    "JP": { "title": "新規上場｜株式先物" },
+    "ES": { "title": "Nuevos Listados｜Futuros de Acciones" },
+    "PT": { "title": "Novas Listagens｜Futuros de Ações" },
+    "DE": { "title": "Neue Listings｜Aktien-Futures" },
+    "FR": { "title": "Nouveaux Listings｜Futures sur Actions" }
+  },
+  "warnings": [
+    "时间只存 UTC 原始值（datetimeUtc），zh-CN/zh-TW 显示自动 +8；DE/FR 原文日期 07-10 与 EN 不一致，已按 EN",
+    "VN 标题中 Stock Futures 未翻译，按提需原文保留"
+  ]
+}
