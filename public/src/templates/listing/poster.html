@@ -264,6 +264,7 @@ window.renderPoster = function (d) {
       `<img src="${A}${L.ring}">`);
     if (c.icon) {
       const icon = el('icon abs', { left: px(c.icon.x), top: px(c.icon.y), width: px(c.icon.d), height: px(c.icon.d), ...z });
+      icon.dataset.editImage = `coins.${i}.icon`;
       if (coin.icon) icon.innerHTML = `<img src="${coin.icon}">`;
     }
     const nameStyle = {

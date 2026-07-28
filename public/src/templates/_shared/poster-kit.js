@@ -8,6 +8,8 @@
 //     - ?edit=1 时给 [data-edit="路径"] 挂 contentEditable 直编，
 //       编辑经 postMessage {type:'poster-update', data} 回传父页。
 //       父页收到后只存 state 不回推 setData（回推会打断光标，KOL 教训）。
+//     - ?edit=1 时 [data-edit-image="路径"] 变成点击上传：点图 → 文件选择器 →
+//       data URL 写进数据并整体重渲（图片无光标，重渲安全），同样回传父页。
 //   路径写法："title" / "rows.0.term"（rows 字段用行索引）。
 
 (function () {
@@ -30,6 +32,33 @@
         parent.postMessage({ type: 'poster-update', data }, '*');
       });
     });
+    document.querySelectorAll('[data-edit-image]').forEach((el) => {
+      if (el.dataset.imgBound) return; // 常驻节点（不随 render 重建）防止重复挂监听
+      el.dataset.imgBound = '1';
+      el.style.cursor = 'pointer';
+      el.title = '点击上传图片';
+      el.addEventListener('click', () => pickImage(el.dataset.editImage));
+    });
+  }
+
+  function pickImage(path) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 15 * 1024 * 1024) { alert('图片超过 15MB，请压缩后再上传'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setByPath(current, path, reader.result);
+        window.setData(current);
+        const { _size, ...data } = current;
+        parent.postMessage({ type: 'poster-update', data }, '*');
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   // 末段支持 "key@n"：只改多行文本字段（\n 分隔）的第 n 行——

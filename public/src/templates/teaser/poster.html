@@ -90,6 +90,7 @@ window.renderPoster = function (d) {
     `<img src="${A}${L.photo.src}">`);
 
   const coin = el('coin abs', { left: px(L.coin.x), top: px(L.coin.y), width: px(L.coin.d), height: px(L.coin.d) });
+  coin.dataset.editImage = 'coinIcon';
   coin.innerHTML = `<img src="${d.coinIcon || A + 'coin.png'}">`;
   el('glow abs', { left: px(L.glow.x), top: px(L.glow.y), width: px(L.glow.w), height: px(L.glow.h) },
     `<img src="${A}glow.svg">`);

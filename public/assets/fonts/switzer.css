@@ -1,0 +1,13 @@
+/* Switzer 自托管（Fontshare 免费字体，ITF）— wallet 亮点海报 EN 标题用 */
+@font-face {
+  font-family: 'Switzer';
+  src: url('switzer-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Switzer';
+  src: url('switzer-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}

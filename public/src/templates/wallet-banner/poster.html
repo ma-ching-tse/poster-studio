@@ -46,8 +46,11 @@
   .cta-arrow { width: 15.63px; height: 15.63px; display: flex; align-items: center; justify-content: center; }
   .cta-arrow img { width: 12.55px; height: 12.55px; transform: rotate(45deg); display: block; }
 
-  /* 卡片手持图：设计位 left 405 / top 32（444-39），底部越界由 stage 裁切 */
-  .card { position: absolute; left: 405px; top: 32px; width: 254px; height: 384px; }
+  /* 主图槽位：Figma 的 224×224 裁切框（x444，右边距 32）。
+     上传图按 1:1 cover 填满；内置卡片手持图保持设计内偏移（-39/32，254×384） */
+  .card { position: absolute; left: 444px; top: 0; width: 224px; height: 224px; overflow: hidden; }
+  .card .fill { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .builtin { position: absolute; left: -39px; top: 32px; width: 254px; height: 384px; }
 </style>
 </head>
 <body>
@@ -56,11 +59,11 @@
     <div class="title" data-edit="title"></div>
     <div class="subtitle" data-edit="subtitle"></div>
     <div class="cta" id="cta">
-      <span class="cta-text" id="cta-text"></span>
+      <span class="cta-text" id="cta-text" data-edit="cta"></span>
       <span class="cta-arrow"><img id="cta-arrow" src="../../../assets/wallet/arrow-dark.svg" alt=""></span>
     </div>
   </div>
-  <img class="card" src="../../../assets/wallet/card.png" alt="">
+  <div class="card" id="card" data-edit-image="image"></div>
 </div>
 
 <script>
@@ -74,7 +77,17 @@ window.renderPoster = function (d) {
   const cta = String(d.cta ?? '').trim();
   document.getElementById('cta').classList.toggle('off', !cta);
   document.getElementById('cta-text').innerText = cta;
+  // 主图：上传图按 1:1 填满槽位；没有上传则用内置卡片手持图（设计偏移）
+  document.getElementById('card').innerHTML = d.image
+    ? `<img class="fill" src="${d.image}">`
+    : '<img class="builtin" src="../../../assets/wallet/card.png">';
 };
+
+// 直编清空按钮文字后隐藏整行（失焦时才收，编辑中删空还能继续打字）；
+// 导出侧由 renderPoster 按数据兜底，两条路径同一判断
+document.getElementById('cta-text').addEventListener('blur', function () {
+  if (!this.innerText.trim()) document.getElementById('cta').classList.add('off');
+});
 </script>
 <script src="../_shared/poster-kit.js"></script>
 </body>

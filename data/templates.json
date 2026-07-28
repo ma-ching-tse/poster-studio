@@ -705,9 +705,14 @@
       {
         "key": "cta",
         "type": "text",
-        "label": "按钮文字（清空 = 无按钮）",
-        "input": true,
+        "label": "按钮文字",
         "translatable": true
+      },
+      {
+        "key": "image",
+        "type": "image",
+        "label": "主图",
+        "optional": true
       }
     ],
     "fixture": {
@@ -715,7 +720,81 @@
       "lang": "EN",
       "title": "Earn USDT on Activation Zero Transaction Fees",
       "subtitle": "Two Benefits, One Card - Activate & Save",
-      "cta": "Join Now"
+      "cta": "Join Now",
+      "image": ""
+    }
+  },
+  {
+    "id": "wallet-highlight",
+    "name": "Wallet 亮点海报",
+    "line": "Wallet",
+    "exportName": "wallet-highlight-{lang}-{size}",
+    "sizes": [
+      {
+        "id": "square",
+        "viewW": 400,
+        "viewH": 400,
+        "scale": 3
+      }
+    ],
+    "fields": [
+      {
+        "key": "lang",
+        "type": "enum",
+        "label": "语言",
+        "options": [
+          "EN",
+          "zh-CN",
+          "zh-TW",
+          "VI",
+          "JA",
+          "ES",
+          "PT",
+          "DE",
+          "FR",
+          "RU",
+          "TR"
+        ],
+        "defaults": [
+          "EN",
+          "zh-CN",
+          "zh-TW"
+        ]
+      },
+      {
+        "key": "title",
+        "type": "text",
+        "label": "标题",
+        "translatable": true
+      },
+      {
+        "key": "subtitle",
+        "type": "text",
+        "label": "副标题",
+        "translatable": true
+      },
+      {
+        "key": "screenshot",
+        "type": "image",
+        "label": "手机截图",
+        "optional": true
+      }
+    ],
+    "i18n": {
+      "zh-CN": {
+        "title": "预测市场",
+        "subtitle": "预测事件结果，猜对即获利"
+      },
+      "zh-TW": {
+        "title": "預測市場",
+        "subtitle": "預測事件結果，猜對即獲利"
+      }
+    },
+    "fixture": {
+      "lang": "EN",
+      "title": "Prediction Market",
+      "subtitle": "Call it right, earn on-chain",
+      "screenshot": ""
     }
   }
 ]

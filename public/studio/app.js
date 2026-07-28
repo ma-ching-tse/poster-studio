@@ -6,7 +6,7 @@
 //   enum  -> 侧栏分段按钮；manifest 带 defaults 时只显示已选子集，
 //            label 旁 + 弹下拉 checkbox 对全量 options 增删（至少留一个）
 //   rows  -> 侧栏 +/- 行（新行克隆 fixture 对应行或末行）
-//   image -> 侧栏上传（FileReader → data URL 存 state，随渲染请求走，服务端零存储）
+//   image -> 海报上点击图片上传（poster-kit data-edit-image；data URL 经 poster-update 回传存 state，服务端零存储）
 //
 // 直编回传只存 state 不回推 setData —— 回推会重建 DOM 打断光标（KOL 教训）。
 
@@ -176,7 +176,11 @@ function renderSidebar() {
     if (f.type === 'enum') {
       // lang 的可选池随当前类别走（categories[类别].langs），而非全量 options
       const pool = (f.key === 'lang' && catConf()) ? catConf().langs : f.options;
-      const sel = f.defaults ? (state.sel[f.key] ??= [...pool]) : null;
+      // 初始已选子集 = manifest defaults（限定在池内，空则全池），+ 下拉可增删
+      const sel = f.defaults
+        ? (state.sel[f.key] ??= (f.defaults.filter(o => pool.includes(o)).length
+            ? f.defaults.filter(o => pool.includes(o)) : [...pool]))
+        : null;
       const open = state.managing === f.key;
       const action = sel && {
         label: '＋',
@@ -227,14 +231,7 @@ function renderSidebar() {
         el.appendChild(inp);
       }));
     }
-    if (f.type === 'image') {
-      box.appendChild(group(f.label, (el) => {
-        el.appendChild(btn(state.data[f.key] ? '换一张' : '上传', () => pickImage(f.key)));
-        if (state.data[f.key]) {
-          el.appendChild(btn('清除', () => { state.data[f.key] = ''; renderSidebar(); pushData(); }));
-        }
-      }));
-    }
+    // image 字段不出侧栏控件：海报上点击图片直接上传（poster-kit 的 data-edit-image）
     if (f.type === 'rows') {
       box.appendChild(group(`${f.label}（${state.data[f.key].length}）`, (el) => {
         el.append(
@@ -255,19 +252,6 @@ function renderSidebar() {
       }));
     }
   }
-}
-
-function pickImage(key) {
-  const input = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' });
-  input.onchange = () => {
-    const file = input.files[0];
-    if (!file) return;
-    if (file.size > 15 * 1024 * 1024) { alert('图片超过 15MB，请压缩后再上传'); return; }
-    const reader = new FileReader();
-    reader.onload = () => { state.data[key] = reader.result; renderSidebar(); pushData(); };
-    reader.readAsDataURL(file);
-  };
-  input.click();
 }
 
 function group(label, fill, action, dropdown) {
