@@ -7,7 +7,8 @@ export const AUTH_COOKIE = 'lark_auth';
 export const STATE_COOKIE = 'lark_oauth_state';
 
 // 「贴链接拉取」所需的用户权限；应用后台需开通同名用户身份权限
-export const OAUTH_SCOPES = 'sheets:spreadsheet:readonly drive:drive:readonly offline_access';
+export const OAUTH_SCOPES =
+  'sheets:spreadsheet:readonly drive:drive:readonly wiki:wiki:readonly docx:document:readonly offline_access';
 
 export interface LarkAuth {
   domain: string;        // API 域，如 open.feishu.cn / open.larksuite.com
@@ -16,18 +17,22 @@ export interface LarkAuth {
   expiresAt: number;     // access_token 过期时刻（epoch ms）
 }
 
-// 表格链接 → { apiDomain, spreadsheetToken }；不认识的链接返回 null
-export function parseSheetUrl(url: string): { domain: string; token: string } | null {
+// Lark 链接 → { apiDomain, kind, token }。支持表格 /sheets/、文档 /docx/、
+// wiki 壳 /wiki/（节点里包的实际是表格或文档，拉取时再解包）。不认识返回 null。
+export type LarkLinkKind = 'sheet' | 'docx' | 'wiki';
+
+export function parseLarkUrl(url: string): { domain: string; kind: LarkLinkKind; token: string } | null {
   let u: URL;
   try { u = new URL(url); } catch { return null; }
-  const m = u.pathname.match(/\/sheets\/([A-Za-z0-9]+)/);
+  const m = u.pathname.match(/\/(sheets|docx|wiki)\/([A-Za-z0-9]+)/);
   if (!m) return null;
   const host = u.hostname;
   let domain: string | null = null;
   if (/(^|\.)feishu\.cn$/.test(host)) domain = 'open.feishu.cn';
   else if (/(^|\.)larksuite\.com$/.test(host)) domain = 'open.larksuite.com';
   if (!domain) return null;
-  return { domain, token: m[1] };
+  const kind: LarkLinkKind = m[1] === 'sheets' ? 'sheet' : (m[1] as LarkLinkKind);
+  return { domain, kind, token: m[2] };
 }
 
 export function authorizeUrl(domain: string, redirectUri: string, state: string): string {
@@ -93,12 +98,85 @@ export async function larkGet<T>(auth: LarkAuth, path: string): Promise<T> {
   return data.data as T;
 }
 
+// wiki 节点 → 实际对象（sheet / docx / …）
+export async function resolveWikiNode(
+  auth: LarkAuth, nodeToken: string,
+): Promise<{ objType: string; objToken: string; title: string }> {
+  const data = await larkGet<{ node: { obj_type: string; obj_token: string; title: string } }>(
+    auth, `/open-apis/wiki/v2/spaces/get_node?token=${nodeToken}&obj_type=wiki`);
+  return { objType: data.node.obj_type, objToken: data.node.obj_token, title: data.node.title };
+}
+
 export interface SheetTab { sheet_id: string; title: string; hidden?: boolean }
 
 export async function listSheetTabs(auth: LarkAuth, spreadsheetToken: string): Promise<SheetTab[]> {
   const data = await larkGet<{ sheets: SheetTab[] }>(
     auth, `/open-apis/sheets/v3/spreadsheets/${spreadsheetToken}/sheets/query`);
   return (data.sheets || []).filter((s) => !s.hidden);
+}
+
+// —— 文档（docx）→ 值网格 ——
+// 把文档按阅读顺序摊平成与表格同构的 values 网格：文本/标题行 → 单元素行，
+// 表格 → 行数组，空行跳过（文档里的空段落不承担「区块结束」语义，区块以下一个
+// 标记行收尾）。这样 [meta]/[coins]/[langs] 的解析器对表格和文档完全复用。
+
+interface DocxBlock {
+  block_id: string;
+  block_type: number;
+  children?: string[];
+  table?: { cells?: string[]; property?: { row_size: number; column_size: number } };
+  [key: string]: unknown;
+}
+
+// 各种文本类 block（text/heading1..9/bullet/ordered/quote/todo…）的内容都长这样：
+// { elements: [{ text_run: { content } }, …] }，逐个属性探测比枚举类型编号稳
+function blockText(block: DocxBlock): string | null {
+  for (const v of Object.values(block)) {
+    if (v && typeof v === 'object' && Array.isArray((v as { elements?: unknown[] }).elements)) {
+      const els = (v as { elements: { text_run?: { content?: string } }[] }).elements;
+      return els.map((e) => e.text_run?.content ?? '').join('');
+    }
+  }
+  return null;
+}
+
+export async function readDocxGrid(auth: LarkAuth, docId: string): Promise<unknown[][]> {
+  const blocks: DocxBlock[] = [];
+  let pageToken = '';
+  do {
+    const data = await larkGet<{ items: DocxBlock[]; page_token?: string; has_more?: boolean }>(
+      auth,
+      `/open-apis/docx/v1/documents/${docId}/blocks?page_size=500${pageToken ? `&page_token=${pageToken}` : ''}`,
+    );
+    blocks.push(...(data.items || []));
+    pageToken = data.has_more ? data.page_token || '' : '';
+  } while (pageToken);
+
+  const byId = new Map(blocks.map((b) => [b.block_id, b]));
+  const cellText = (cellId: string): string =>
+    (byId.get(cellId)?.children || [])
+      .map((id) => blockText(byId.get(id) || ({} as DocxBlock)) ?? '')
+      .join('\n').trim();
+
+  const grid: unknown[][] = [];
+  const walk = (id: string) => {
+    const b = byId.get(id);
+    if (!b) return;
+    if (b.block_type === 31 && b.table?.cells && b.table.property) {
+      const { column_size: cols } = b.table.property;
+      for (let i = 0; i < b.table.cells.length; i += cols) {
+        grid.push(b.table.cells.slice(i, i + cols).map(cellText));
+      }
+      return; // 表格子块已消费，不再下钻
+    }
+    const text = blockText(b);
+    if (text !== null && text.trim() !== '') grid.push([text.trim()]);
+    for (const child of b.children || []) walk(child);
+  };
+  // 根块 = 文档本身（block_id 与文档 id 同）；兜底取第一个 page 块
+  const root = byId.get(docId) || blocks.find((b) => b.block_type === 1);
+  if (root) for (const child of root.children || []) walk(child);
+  return grid;
 }
 
 export async function readTabValues(
