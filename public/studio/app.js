@@ -341,6 +341,13 @@ function downloadBlob(blob, name) {
 // 主按钮单态机：没有解析结果时是「解析」，解析通过后变「应用导入」；改动输入即打回。
 let briefChecked = null; // { template, result } — 最近一次通过解析的结果
 
+// 使用指南：入口在画廊标题旁和生成器侧栏顶部，共用一个弹窗（guide.png 整页截图）
+for (const btn of document.querySelectorAll('.guide-open')) {
+  btn.onclick = () => { $('guide-modal').hidden = false; };
+}
+$('guide-close').onclick = () => { $('guide-modal').hidden = true; };
+$('guide-modal').onclick = (e) => { if (e.target.id === 'guide-modal') $('guide-modal').hidden = true; };
+
 $('import').onclick = () => { $('import-modal').hidden = false; $('brief-input').focus(); };
 $('brief-cancel').onclick = closeImport;
 $('import-modal').onclick = (e) => { if (e.target.id === 'import-modal') closeImport(); };

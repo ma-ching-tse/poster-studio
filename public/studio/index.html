@@ -146,14 +146,42 @@
   body:not(.in-studio) aside, body:not(.in-studio) main { display: none; }
   .aside-head { display: flex; align-items: center; gap: 8px; }
   .aside-head .label-btn { margin-left: 0; flex: none; }
+  .gallery-head { display: flex; align-items: center; gap: 8px; }
+  .gallery-head .guide-open, .aside-head .guide-open { margin-left: auto; }
+  /* —— 使用指南弹窗：内容就是指南文档整页截图 —— */
+  #guide-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    display: grid; place-items: center;
+  }
+  .guide-card {
+    width: 720px; max-width: calc(100vw - 48px); max-height: 88vh; overflow-y: auto;
+    background: var(--color-bgline2);
+    border: 1px solid var(--color-border); border-radius: 16px;
+  }
+  .guide-head {
+    position: sticky; top: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--color-bgline2); border-bottom: 1px solid var(--color-border);
+  }
+  .guide-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+  .guide-card img { display: block; width: 100%; }
 </style>
 </head>
 <body>
-  <div id="gallery"><h1>Poster Studio</h1><div id="lines"></div></div>
+  <div id="gallery">
+    <div class="gallery-head">
+      <h1>Poster Studio</h1>
+      <button class="label-btn guide-open">使用指南</button>
+    </div>
+    <div id="lines"></div>
+  </div>
   <aside>
     <div class="aside-head">
       <button id="back" class="label-btn" title="返回画廊">←</button>
       <h1 id="studio-title">Poster Studio</h1>
+      <button class="label-btn guide-open">使用指南</button>
     </div>
     <div class="group"><label>尺寸</label><div class="seg" id="size-seg"></div></div>
     <div id="field-groups"></div>
@@ -175,6 +203,17 @@
         <button id="brief-cancel">取消</button>
         <button id="brief-go" class="primary">解析</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 使用指南：Lark 文档整页截图，替换 guide.png 即可更新 -->
+  <div id="guide-modal" hidden>
+    <div class="guide-card">
+      <div class="guide-head">
+        <h2>使用指南</h2>
+        <button id="guide-close" class="label-btn">关闭</button>
+      </div>
+      <img src="guide.png" alt="Poster Studio 使用指南">
     </div>
   </div>
 
