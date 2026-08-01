@@ -14,7 +14,7 @@ npm run dev
 - `public/` 下所有文件（studio 控制台、模板、素材、字体）为部署上的**原始文件**，逐字节拷回
 - `app/`（Next.js 壳、StudioShell 导出组件、API 路由）为**重建**：StudioShell 从客户端 chunk 反推，行为与原版一致
 - `/api/templates` 返回 `data/templates.json`（抓取自线上接口的完整 registry）
-- `/api/brief/fetch`（Lark Sheets 链接拉取）依赖服务端 lark-cli，无法从部署恢复，现为 501 占位；粘贴 JSON 导入不受影响
+- `/api/brief/fetch`（Lark Sheets 链接拉取）已重做为直连 Lark 开放平台（个人应用，不再依赖公司内网 lark-cli）：OAuth 用户授权（token 存 httpOnly cookie，服务端无状态），拉表后按 `[meta]/[coins]/[langs]` 区块规则解析为 brief（`lib/lark.ts` + `lib/brief-parse.ts`），一个工作表标签 = 一期。需环境变量 `LARK_APP_ID` / `LARK_APP_SECRET`；提需表用 `scripts/create-brief-sheet.mjs` 生成。粘贴 JSON 导入不受影响
 - `public/assets/savings/coins/` 只找回 6 个图标（btc/eth/sol/usdc/usdt/xrp，靠常见符号试探；目录无法枚举）。其他币种用控制台的「上传」即可，模板对缺失图标会自动隐藏
 
 ## 结构

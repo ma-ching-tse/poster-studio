@@ -1,6 +1,6 @@
-// 提需导入（brief）契约 — 「贴 Lark 提需文档」两步走的数据接口。
-//   第一步（现在）：人工/半自动产出 brief JSON，控制台「导入提需」粘贴导入；
-//   第二步（TODO）：服务端拉 Lark + LLM 归一化，直接产出同一 schema。
+// 提需导入（brief）契约 — 「贴 Lark 提需文档」的数据接口。
+//   路 1：粘贴 brief JSON 直接导入；
+//   路 2：贴 Lark Sheets 链接，服务端拉表并规则解析为同一 schema（app/api/brief/fetch）。
 // 样例见 src/templates/listing/brief.sample.json。
 //
 // schema：
