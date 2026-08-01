@@ -26,6 +26,39 @@
   };
   const normalizeLang = (code) => LANG_ALIASES[String(code).trim()] || String(code).trim();
 
+  // 语言种子：把 data 里「提需/运营没提供」的字段灌上该语言的预置文案。
+  // listing 走 categories[类别].titles[lang]（只赋标题）；其余模板走 i18n
+  // （具名字段直赋 + values/patterns 对 rows 文本列做值翻译）。
+  // skip = 已由提需明确提供、不该被种子覆盖的字段 key 集合。
+  function seedLangData(manifest, data, skip) {
+    skip = skip || new Set();
+    const lang = data.lang;
+    const conf = manifest.categories?.[data.category];
+    if (conf) {
+      if (!skip.has('title') && conf.titles[lang] !== undefined) data.title = conf.titles[lang];
+      return;
+    }
+    const seed = manifest.i18n?.[lang];
+    if (!seed) return;
+    const { values = {}, patterns = [], ...fields } = seed;
+    for (const [k, v] of Object.entries(fields)) if (!skip.has(k)) data[k] = v;
+    const tr = (s) => {
+      if (values[s] !== undefined) return values[s];
+      for (const [re, rep] of patterns) {
+        if (new RegExp(re).test(s)) return s.replace(new RegExp(re), rep);
+      }
+      return s;
+    };
+    for (const f of manifest.fields) {
+      if (f.type !== 'rows' || skip.has(f.key)) continue;
+      for (const row of data[f.key] || []) {
+        for (const col of f.columns) {
+          if (col.type === 'text' && typeof row[col.key] === 'string') row[col.key] = tr(row[col.key]);
+        }
+      }
+    }
+  }
+
   // 解析 + 校验一份 brief。永不 throw；结果分四类：
   //   errors   致命，不能应用；warnings 提示（含 brief 自带的脏数据标注）；
   //   skipped  单语言不合格（跳过该语言，不拦全局）；ok [{lang, data}] 可应用的成稿。
@@ -68,10 +101,13 @@
         skipped.push({ lang: raw, reason: `语言 ${raw}（=${lang}）重复，保留先出现的一份` });
         continue;
       }
-      // 成稿 = fixture 打底 ⊕ shared ⊕ 该语言字段（同 langData 快照口径）
+      // 成稿 = fixture 打底 ⊕ shared ⊕ 该语言字段（同 langData 快照口径），
+      // 再对提需没提供的字段播语言种子（预置文案），与控制台切语言口径一致
+      const picked = pick(payload, raw);
       const data = structuredClone(manifest.fixture);
-      Object.assign(data, structuredClone(shared), structuredClone(pick(payload, raw)));
+      Object.assign(data, structuredClone(shared), structuredClone(picked));
       data.lang = lang;
+      seedLangData(manifest, data, new Set([...Object.keys(shared), ...Object.keys(picked)]));
       const err = validateData(manifest, data);
       if (err) { skipped.push({ lang: raw, reason: err }); continue; }
       seen.add(lang);
@@ -81,5 +117,5 @@
     return { errors, warnings, ok, skipped };
   }
 
-  return { LANG_ALIASES, normalizeLang, checkBrief };
+  return { LANG_ALIASES, normalizeLang, checkBrief, seedLangData };
 });

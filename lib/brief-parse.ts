@@ -89,7 +89,7 @@ export function parseBriefTab(values: unknown[][], tabTitle: string): ParsedBrie
       source: tabTitle,
       shared: { coins },
       langs: {},
-      warnings: [`「${tabTitle}」为纯币种提需（无 [langs] 文案区块）：各语言标题用模板默认值，请在控制台确认/修改`],
+      warnings: [`「${tabTitle}」为纯币种提需（无 [langs] 文案区块）：各语言标题用预置文案，不覆盖`],
     };
   }
 

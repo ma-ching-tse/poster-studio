@@ -133,33 +133,10 @@ function setCategory(v) {
   seedLang(state.data.lang);
 }
 
-// 语言种子：listing 走 categories[类别].titles[lang]（只赋标题）；
-// 其余模板走 i18n（具名字段直赋 + values/patterns 对 rows 文本列做值翻译）
+// 语言种子逻辑在 src/shared/brief.js（seedLangData），与提需导入共用同一口径
 function seedLang(v) {
-  const conf = catConf();
-  if (conf) {
-    if (conf.titles[v] !== undefined) state.data.title = conf.titles[v];
-    return;
-  }
-  const seed = manifest().i18n?.[v];
-  if (!seed) return;
-  const { values = {}, patterns = [], ...fields } = seed;
-  Object.assign(state.data, fields);
-  const tr = (s) => {
-    if (values[s] !== undefined) return values[s];
-    for (const [re, rep] of patterns) {
-      if (new RegExp(re).test(s)) return s.replace(new RegExp(re), rep);
-    }
-    return s;
-  };
-  for (const f of manifest().fields) {
-    if (f.type !== 'rows') continue;
-    for (const row of state.data[f.key]) {
-      for (const col of f.columns) {
-        if (col.type === 'text' && typeof row[col.key] === 'string') row[col.key] = tr(row[col.key]);
-      }
-    }
-  }
+  state.data.lang = v;
+  PosterBrief.seedLangData(manifest(), state.data);
 }
 
 function renderSidebar() {
