@@ -27,6 +27,42 @@ function needLogin(req: NextRequest, domain: string) {
   return res;
 }
 
+// 调试出口：浏览器直接打开 /api/brief/fetch?url=<Lark 链接>，用当前 cookie 的授权
+// 返回解析前的原始网格（文档摊平结果 / 表格各标签 values），用于对齐解析器与真实结构。
+export async function GET(req: NextRequest) {
+  const url = req.nextUrl.searchParams.get('url') || '';
+  const link = parseLarkUrl(url);
+  if (!link) return NextResponse.json({ error: '加 ?url=<Lark 链接>' }, { status: 400 });
+  let auth: LarkAuth | null = null;
+  try {
+    const raw = req.cookies.get(AUTH_COOKIE)?.value;
+    if (raw) auth = JSON.parse(raw) as LarkAuth;
+  } catch { auth = null; }
+  if (!auth || auth.domain !== link.domain) {
+    return NextResponse.json({ error: '当前浏览器还没授权：先在控制台走一次「导入提需」授权' }, { status: 401 });
+  }
+  if (Date.now() >= auth.expiresAt) {
+    try { auth = await refreshAuth(auth); } catch { return NextResponse.json({ error: '授权过期，重新走一次导入授权' }, { status: 401 }); }
+  }
+  try {
+    let kind: string = link.kind, token = link.token, title = '';
+    if (kind === 'wiki') {
+      const node = await resolveWikiNode(auth, token);
+      kind = node.objType; token = node.objToken; title = node.title;
+    }
+    if (kind === 'sheet') {
+      const tabs = [];
+      for (const tab of await listSheetTabs(auth, token)) {
+        tabs.push({ title: tab.title, values: await readTabValues(auth, token, tab.sheet_id) });
+      }
+      return NextResponse.json({ kind, title, tabs });
+    }
+    return NextResponse.json({ kind, title, grid: await readDocxGrid(auth, token) });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.LARK_APP_ID || !process.env.LARK_APP_SECRET) {
     return NextResponse.json({ error: '服务端未配置 LARK_APP_ID / LARK_APP_SECRET' }, { status: 500 });

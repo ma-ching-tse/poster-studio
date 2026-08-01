@@ -125,8 +125,13 @@ interface DocxBlock {
   block_type: number;
   children?: string[];
   table?: { cells?: string[]; property?: { row_size: number; column_size: number } };
+  image?: { token?: string };
   [key: string]: unknown;
 }
+
+// 嵌入图片在网格里的占位形式；解析出 token 后可经 drive media 接口下载成 data URL
+export const IMG_MARK = /^\[\[img:([A-Za-z0-9_-]+)\]\]$/;
+const imgMark = (token: string) => `[[img:${token}]]`;
 
 // 各种文本类 block（text/heading1..9/bullet/ordered/quote/todo…）的内容都长这样：
 // { elements: [{ text_run: { content } }, …] }，逐个属性探测比枚举类型编号稳
@@ -153,9 +158,15 @@ export async function readDocxGrid(auth: LarkAuth, docId: string): Promise<unkno
   } while (pageToken);
 
   const byId = new Map(blocks.map((b) => [b.block_id, b]));
+  // 块 → 内容：文本块取文字，图片块（27）给 [[img:token]] 占位
+  const blockContent = (b: DocxBlock | undefined): string | null => {
+    if (!b) return null;
+    if (b.block_type === 27 && b.image?.token) return imgMark(b.image.token);
+    return blockText(b);
+  };
   const cellText = (cellId: string): string =>
     (byId.get(cellId)?.children || [])
-      .map((id) => blockText(byId.get(id) || ({} as DocxBlock)) ?? '')
+      .map((id) => blockContent(byId.get(id)) ?? '')
       .join('\n').trim();
 
   const grid: unknown[][] = [];
@@ -169,8 +180,8 @@ export async function readDocxGrid(auth: LarkAuth, docId: string): Promise<unkno
       }
       return; // 表格子块已消费，不再下钻
     }
-    const text = blockText(b);
-    if (text !== null && text.trim() !== '') grid.push([text.trim()]);
+    const content = blockContent(b);
+    if (content !== null && content.trim() !== '') grid.push([content.trim()]);
     for (const child of b.children || []) walk(child);
   };
   // 根块 = 文档本身（block_id 与文档 id 同）；兜底取第一个 page 块
