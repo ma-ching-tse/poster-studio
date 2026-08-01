@@ -1,15 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  AUTH_COOKIE, STATE_COOKIE, LarkAuth,
+  AUTH_COOKIE, STATE_COOKIE, LarkAuth, IMG_MARK,
   parseLarkUrl, authorizeUrl, refreshAuth, listSheetTabs, readTabValues,
-  resolveWikiNode, readDocxGrid,
+  resolveWikiNode, readDocxGrid, downloadMediaDataUrl,
 } from '@/lib/lark';
-import { parseBriefTab } from '@/lib/brief-parse';
+import { parseBriefTab, ParsedBrief } from '@/lib/brief-parse';
+import templates from '@/data/templates.json';
 
 // 贴 Lark 链接（Sheets / Docs / Wiki）→ 拉取 → 归一化为 brief。
 // 直连 Lark 开放平台（个人应用），OAuth user_access_token 存 httpOnly cookie；
 // 未授权时返回 { needLogin, loginUrl }，前端开授权页并轮询本接口直到 cookie 就位。
 // wiki 链接先解包成实际对象；表格一个标签 = 一期，文档整篇 = 一期。
+
+// 解析后处理：纯币种 brief 补默认语言池；[[img:token]] 图标占位下载成 data URL
+async function finalizeBrief(auth: LarkAuth, brief: ParsedBrief, iconCache: Map<string, string>) {
+  if (!Object.keys(brief.langs).length) {
+    const manifest = (templates as { id: string; fields: { key: string; defaults?: string[]; options?: string[] }[] }[])
+      .find((t) => t.id === brief.template);
+    const langField = manifest?.fields.find((f) => f.key === 'lang');
+    for (const lang of langField?.defaults || langField?.options || ['EN']) brief.langs[lang] = {};
+  }
+  const coins = brief.shared.coins as Record<string, string>[] | undefined;
+  for (const coin of coins || []) {
+    const m = typeof coin.icon === 'string' ? coin.icon.match(IMG_MARK) : null;
+    if (!m) continue;
+    try {
+      if (!iconCache.has(m[1])) iconCache.set(m[1], await downloadMediaDataUrl(auth, m[1]));
+      coin.icon = iconCache.get(m[1])!;
+    } catch (err) {
+      coin.icon = '';
+      brief.warnings.push(`${coin.ticker || coin.name || '币种'} 的嵌入图标下载失败（${(err as Error).message}），请在控制台手动上传`);
+    }
+  }
+}
 
 const originOf = (req: NextRequest) => {
   const host = req.headers.get('host') || 'localhost:3000';
@@ -117,10 +140,12 @@ export async function POST(req: NextRequest) {
     }
     if (!briefs.length) {
       return NextResponse.json(
-        { error: '没有找到提需内容：需要包含 [meta] / [coins] / [langs] 区块标记（见提需表模板/示例文档）' },
+        { error: '没有找到提需内容：放一张币种表（name / ticker / icon），或用 [meta] / [coins] / [langs] 区块标记（见提需表模板）' },
         { status: 422 },
       );
     }
+    const iconCache = new Map<string, string>();
+    for (const b of briefs) await finalizeBrief(auth, b.brief, iconCache);
     const res = NextResponse.json({ briefs });
     if (refreshed) {
       res.cookies.set(AUTH_COOKIE, JSON.stringify(auth), {

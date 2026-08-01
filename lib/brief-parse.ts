@@ -22,6 +22,44 @@ export interface ParsedBrief {
 const cell = (row: unknown[], i: number): string =>
   row && row[i] != null ? String(row[i]).trim() : '';
 
+// —— 无标记币种表识别 ——
+// 文档里只放一张币种表（不写任何 [xx] 标记）时按纯币种导入：
+//   横排：首列是字段名（name / ticker / icon），一列一个币（Ringo 的提需文档格式）
+//   竖排：某行是表头（含 ticker + name），下面每行一个币
+const COIN_KEYS = new Set(['name', 'ticker', 'icon']);
+
+function parseCoinGrid(values: unknown[][]): Record<string, string>[] | null {
+  // 横排
+  const fieldRows = values.filter((r) => COIN_KEYS.has(cell(r, 0).toLowerCase()));
+  if (fieldRows.length >= 2) {
+    const width = Math.max(...fieldRows.map((r) => r.length));
+    const coins: Record<string, string>[] = [];
+    for (let c = 1; c < width; c++) {
+      const coin: Record<string, string> = { icon: '' };
+      for (const row of fieldRows) coin[cell(row, 0).toLowerCase()] = cell(row, c);
+      if (coin.ticker || coin.name) coins.push(coin);
+    }
+    return coins.length ? coins : null;
+  }
+  // 竖排
+  const hi = values.findIndex((r) => {
+    const h = (r || []).map((c) => String(c ?? '').trim().toLowerCase());
+    return h.includes('ticker') && h.includes('name');
+  });
+  if (hi >= 0) {
+    const header = values[hi].map((h) => String(h ?? '').trim().toLowerCase());
+    const coins: Record<string, string>[] = [];
+    for (const row of values.slice(hi + 1)) {
+      if (isBlank(row)) break;
+      const coin: Record<string, string> = { icon: '' };
+      header.forEach((h, i) => { if (COIN_KEYS.has(h)) coin[h] = cell(row, i); });
+      if (coin.ticker || coin.name) coins.push(coin);
+    }
+    return coins.length ? coins : null;
+  }
+  return null;
+}
+
 const markerOf = (row: unknown[]): Marker | null => {
   const m = cell(row, 0).toLowerCase().match(/^\[(\w+)\]$/);
   return m && (MARKERS as readonly string[]).includes(m[1]) ? (m[1] as Marker) : null;
@@ -42,7 +80,18 @@ export function parseBriefTab(values: unknown[][], tabTitle: string): ParsedBrie
       blocks[current]!.push(row);
     }
   }
-  if (!blocks.langs) return null;
+  // 无 [langs] 标记 → 尝试按纯币种表解析（langs 留空，由路由按模板默认语言池补齐）
+  if (!blocks.langs) {
+    const coins = parseCoinGrid(values);
+    if (!coins) return null;
+    return {
+      template: 'listing',
+      source: tabTitle,
+      shared: { coins },
+      langs: {},
+      warnings: [`「${tabTitle}」为纯币种提需（无 [langs] 文案区块）：各语言标题用模板默认值，请在控制台确认/修改`],
+    };
+  }
 
   const warnings: string[] = [];
 

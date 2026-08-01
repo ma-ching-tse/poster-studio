@@ -190,6 +190,20 @@ export async function readDocxGrid(auth: LarkAuth, docId: string): Promise<unkno
   return grid;
 }
 
+// 文档嵌入图片 → data URL（币种图标很小，直接内联进 brief）
+export async function downloadMediaDataUrl(auth: LarkAuth, fileToken: string): Promise<string> {
+  const res = await fetch(`https://${auth.domain}/open-apis/drive/v1/medias/${fileToken}/download`, {
+    headers: { Authorization: `Bearer ${auth.accessToken}` },
+  });
+  const ct = (res.headers.get('content-type') || '').split(';')[0];
+  if (ct === 'application/json') {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(`下载图片失败（code ${data.code ?? res.status}）：${data.msg ?? '未知错误'}`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  return `data:${ct || 'image/png'};base64,${buf.toString('base64')}`;
+}
+
 export async function readTabValues(
   auth: LarkAuth, spreadsheetToken: string, sheetId: string,
 ): Promise<unknown[][]> {
