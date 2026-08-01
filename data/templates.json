@@ -398,7 +398,7 @@
       "coinIcon": "",
       "subtitle": "BitMart Primary Listing"
     },
-    "line": "上币"
+    "line": "活动"
   },
   {
     "id": "teaser",
@@ -470,7 +470,7 @@
       "coinIcon": "",
       "subtitle": "Listing soon"
     },
-    "line": "上币"
+    "line": "活动"
   },
   {
     "id": "margin",
@@ -557,7 +557,7 @@
       "subHighlight": "3x ",
       "subText": "the leverage win-win in short or long!"
     },
-    "line": "上币"
+    "line": "活动"
   },
   {
     "id": "discovery",
@@ -644,7 +644,7 @@
       "subtitle": "BM Discovery Listing on BitMart, Trading Available",
       "badge": "BM Discovery"
     },
-    "line": "上币"
+    "line": "活动"
   },
   {
     "id": "wallet-banner",
