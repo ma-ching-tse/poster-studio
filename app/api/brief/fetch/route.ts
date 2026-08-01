@@ -95,9 +95,10 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     const code = (err as Error & { larkCode?: number }).larkCode;
-    // token 失效/过期 → 重新授权；99991672 = token 缺权限（应用加了新 scope 后旧
-    // 授权不带）→ 也重新授权，让用户按新 scope 重新同意
-    if (code === 99991661 || code === 99991663 || code === 99991668 || code === 20005 || code === 99991672) {
+    // token 失效/过期 → 重新授权；99991672/99991679 = token 缺权限（应用加了新
+    // scope 后旧授权不带）→ 也重新授权，让用户按新 scope 重新同意
+    if (code === 99991661 || code === 99991663 || code === 99991668 || code === 20005
+      || code === 99991672 || code === 99991679) {
       return needLogin(req, link.domain);
     }
     if (code === 91403 || code === 1310213 || code === 1310249) {
