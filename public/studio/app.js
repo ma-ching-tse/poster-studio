@@ -26,6 +26,8 @@ document.addEventListener('click', (e) => {
 
 const $ = (id) => document.getElementById(id);
 const manifest = () => templates.find(t => t.id === state.template);
+// 模板文件目录：manifest.dir 允许多个注册项共用一套 poster.html（如合约/现货共用 listing）
+const tplDir = (t) => t.dir || t.id;
 
 async function init() {
   templates = await (await fetch('/api/templates')).json();
@@ -64,7 +66,14 @@ function buildGallery() {
     col.appendChild(title);
     const cards = document.createElement('div');
     cards.className = 'cards';
+    const seenGroups = new Set();
     for (const t of list) {
+      // 同 group 的模板合成一张卡（卡名 = 组名，缩略图/入口 = 组内第一个），
+      // 进入后侧栏顶部出「类型」标签切换组内模板
+      if (t.group) {
+        if (seenGroups.has(t.group)) continue;
+        seenGroups.add(t.group);
+      }
       const s = t.sizes[0];
       const card = document.createElement('div');
       card.className = 'card';
@@ -77,10 +86,10 @@ function buildGallery() {
       iframe.style.zoom = String(CARD_W / s.viewW);
       iframe.onload = () => iframe.contentWindow.postMessage(
         { type: 'set-data', data: { ...t.fixture, _size: s.id } }, '*');
-      iframe.src = `/src/templates/${t.id}/poster.html`;
+      iframe.src = `/src/templates/${tplDir(t)}/poster.html`;
       thumb.appendChild(iframe);
       card.append(thumb, Object.assign(document.createElement('div'),
-        { className: 'card-name', textContent: t.name }));
+        { className: 'card-name', textContent: t.group || t.name }));
       cards.appendChild(card);
     }
     col.appendChild(cards);
@@ -139,9 +148,30 @@ function seedLang(v) {
   PosterBrief.seedLangData(manifest(), state.data);
 }
 
+// 组内切标签：整体走 selectTemplate 重置（两边字段集不同），再把同 key 的
+// 语言无关字段（币种代码/全称/图标/时间等）从旧稿带过来——运营同一个币
+// 连出两张图（如先预热再空投）不用重填；translatable 字段各模板文案不同，不带
+function switchTab(id) {
+  if (id === state.template) return;
+  const prev = state.data;
+  selectTemplate(id);
+  for (const f of manifest().fields) {
+    if (f.key === 'lang' || f.key === 'category' || f.translatable) continue;
+    if (prev[f.key] !== undefined) state.data[f.key] = structuredClone(prev[f.key]);
+  }
+  location.hash = `#/t/${id}`; // route 见 state 已一致，不会二次重置
+  renderSidebar();
+}
+
 function renderSidebar() {
   const m = manifest();
-  $('studio-title').textContent = m.name; // 模板在画廊选定，侧栏标题即模板名
+  $('studio-title').textContent = m.group || m.name; // 模板在画廊选定，侧栏标题即卡名
+  const members = m.group ? templates.filter(t => t.group === m.group) : [];
+  $('tab-group').hidden = members.length < 2;
+  if (members.length > 1) {
+    seg($('tab-seg'), members.map(t => ({ value: t.id, label: t.tab || t.name })),
+      state.template, switchTab);
+  }
   $('import').hidden = !m.brief; // 提需导入是模板级开关（manifest.brief），savings 等模板不出入口
   seg($('size-seg'), m.sizes.map(s => ({ value: s.id, label: s.id })),
     state.size, (v) => { state.size = v; loadPreview(); });
@@ -276,7 +306,7 @@ function loadPreview() {
   iframe.height = s.viewH;
   fitStage(s);
   iframe.onload = () => pushData();
-  iframe.src = `/src/templates/${state.template}/poster.html?edit=1`;
+  iframe.src = `/src/templates/${tplDir(manifest())}/poster.html?edit=1`;
 }
 
 function fitStage(s) {
@@ -317,13 +347,13 @@ async function renderPng(sizeId, data) {
   if (window.parent !== window && typeof window.parent.renderPosterStudioPng === 'function') {
     const size = manifest().sizes.find((s) => s.id === sizeId);
     return window.parent.renderPosterStudioPng({
-      template: state.template, size, data,
+      template: tplDir(manifest()), size, data,
     });
   }
   const res = await fetch('/api/render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ template: state.template, size: sizeId, data }),
+    body: JSON.stringify({ template: tplDir(manifest()), size: sizeId, data }),
   });
   if (!res.ok) throw new Error((await res.json()).error || res.statusText);
   return new Uint8Array(await res.arrayBuffer());
@@ -341,7 +371,7 @@ function downloadBlob(blob, name) {
 // 主按钮单态机：没有解析结果时是「解析」，解析通过后变「应用导入」；改动输入即打回。
 let briefChecked = null; // { template, result } — 最近一次通过解析的结果
 
-// 使用指南：入口在画廊标题旁和生成器侧栏顶部，共用一个弹窗（guide.png 整页截图）
+// 使用指南：入口只在画廊标题旁（生成器内不放，保持侧栏干净），弹窗展示 guide.png 整页截图
 for (const btn of document.querySelectorAll('.guide-open')) {
   btn.onclick = () => { $('guide-modal').hidden = false; };
 }
@@ -447,7 +477,14 @@ async function fetchBrief(url) {
 // 校验一份 brief 并出确认报告（粘贴 JSON 和贴链接两条路都汇到这里）
 function runBriefCheck(brief) {
   const box = $('brief-report');
-  const m = templates.find(t => t.id === brief.template);
+  let m = templates.find(t => t.id === brief.template);
+  if (!m) {
+    // 提需口径 template 填的是模板目录名（Lark 表里固定 listing）。
+    // 上币拆分成合约/现货两个注册项后，按目录收敛候选，再用 brief 的
+    // category 选中对应条目；没给 category 走第一个（= 原默认合约）
+    const cands = templates.filter(t => tplDir(t) === brief.template);
+    m = cands.find(t => t.categories?.[brief.shared?.category]) || cands[0];
+  }
   if (!m) {
     reportLine(box, 'brief-err', `✕ 未知模板：${brief.template}（可用：${templates.filter(t => t.brief).map(t => t.id).join(', ')}）`);
     return;

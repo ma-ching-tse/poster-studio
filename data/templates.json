@@ -1,8 +1,9 @@
 [
   {
-    "id": "listing",
-    "name": "上币海报",
+    "id": "listing-futures",
+    "name": "合约海报",
     "line": "上币",
+    "dir": "listing",
     "brief": true,
     "exportName": "listing-{lang}-{size}",
     "sizes": [
@@ -24,10 +25,9 @@
         "key": "category",
         "type": "enum",
         "label": "类别",
+        "hidden": true,
         "options": [
-          "合约",
-          "现货首发",
-          "现货非首发"
+          "合约"
         ]
       },
       {
@@ -122,7 +122,123 @@
           "DE": "Neue Listings Aktien-Futures",
           "FR": "Nouveaux Listings Futures sur Actions"
         }
+      }
+    },
+    "fixture": {
+      "category": "合约",
+      "lang": "EN",
+      "title": "New Listings Stock Futures",
+      "datetimeUtc": "2026-06-30 15:00",
+      "coins": [
+        {
+          "name": "RMBSON",
+          "ticker": "ATEG.DV",
+          "icon": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "listing-spot",
+    "name": "现货海报",
+    "line": "上币",
+    "dir": "listing",
+    "brief": true,
+    "exportName": "listing-{lang}-{size}",
+    "sizes": [
+      {
+        "id": "pop",
+        "viewW": 400,
+        "viewH": 400,
+        "scale": 3
       },
+      {
+        "id": "web",
+        "viewW": 400,
+        "viewH": 200,
+        "scale": 3
+      }
+    ],
+    "fields": [
+      {
+        "key": "category",
+        "type": "enum",
+        "label": "类别",
+        "options": [
+          "现货首发",
+          "现货非首发"
+        ]
+      },
+      {
+        "key": "lang",
+        "type": "enum",
+        "label": "语言",
+        "options": [
+          "EN",
+          "zh-CN",
+          "zh-TW",
+          "VI",
+          "JA",
+          "ES",
+          "PT",
+          "DE",
+          "FR",
+          "RU",
+          "TR"
+        ],
+        "defaults": [
+          "EN",
+          "zh-CN",
+          "VI",
+          "JA",
+          "ES",
+          "PT",
+          "DE",
+          "FR",
+          "RU",
+          "TR"
+        ]
+      },
+      {
+        "key": "title",
+        "type": "text",
+        "label": "标题",
+        "translatable": true
+      },
+      {
+        "key": "datetimeUtc",
+        "type": "text",
+        "label": "上线时间 (UTC)",
+        "input": true,
+        "shared": true
+      },
+      {
+        "key": "coins",
+        "type": "rows",
+        "label": "币种",
+        "min": 1,
+        "max": 12,
+        "columns": [
+          {
+            "key": "name",
+            "type": "text",
+            "label": "名称"
+          },
+          {
+            "key": "ticker",
+            "type": "text",
+            "label": "代码"
+          },
+          {
+            "key": "icon",
+            "type": "image",
+            "label": "图标",
+            "optional": true
+          }
+        ]
+      }
+    ],
+    "categories": {
       "现货首发": {
         "langs": [
           "EN",
@@ -177,9 +293,9 @@
       }
     },
     "fixture": {
-      "category": "合约",
+      "category": "现货首发",
       "lang": "EN",
-      "title": "New Listings Stock Futures",
+      "title": "BitMart Primary Listing",
       "datetimeUtc": "2026-06-30 15:00",
       "coins": [
         {
@@ -398,7 +514,9 @@
       "coinIcon": "",
       "subtitle": "BitMart Primary Listing"
     },
-    "line": "活动"
+    "line": "活动",
+    "group": "空投",
+    "tab": "空投"
   },
   {
     "id": "teaser",
@@ -470,7 +588,9 @@
       "coinIcon": "",
       "subtitle": "Listing soon"
     },
-    "line": "活动"
+    "line": "活动",
+    "group": "空投",
+    "tab": "预热"
   },
   {
     "id": "margin",
@@ -557,7 +677,9 @@
       "subHighlight": "3x ",
       "subText": "the leverage win-win in short or long!"
     },
-    "line": "活动"
+    "line": "活动",
+    "group": "增链 / Discovery",
+    "tab": "增链"
   },
   {
     "id": "discovery",
@@ -644,7 +766,9 @@
       "subtitle": "BM Discovery Listing on BitMart, Trading Available",
       "badge": "BM Discovery"
     },
-    "line": "活动"
+    "line": "活动",
+    "group": "增链 / Discovery",
+    "tab": "BM Discovery"
   },
   {
     "id": "wallet-banner",

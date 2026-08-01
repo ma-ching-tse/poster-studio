@@ -5,7 +5,7 @@
 //
 // schema：
 //   {
-//     template: 'listing',            // registry 模板 id
+//     template: 'listing',            // registry 模板 id 或模板目录名（dir；上币拆分后 listing 按 category 路由到合约/现货条目）
 //     source:   '……',                 // 可选，来源备注（哪期/哪个文档）
 //     shared:   { coins: [...] },     // 所有语言共用的字段值
 //     langs:    { EN: { title, datetime }, CN: {...} },  // 每语言字段值，盖在 shared 之上

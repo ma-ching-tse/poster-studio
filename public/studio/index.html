@@ -147,7 +147,7 @@
   .aside-head { display: flex; align-items: center; gap: 8px; }
   .aside-head .label-btn { margin-left: 0; flex: none; }
   .gallery-head { display: flex; align-items: center; gap: 8px; }
-  .gallery-head .guide-open, .aside-head .guide-open { margin-left: auto; }
+  .gallery-head .guide-open { margin-left: auto; }
   /* —— 使用指南弹窗：内容就是指南文档整页截图 —— */
   #guide-modal {
     position: fixed; inset: 0; z-index: 100;
@@ -181,8 +181,8 @@
     <div class="aside-head">
       <button id="back" class="label-btn" title="返回画廊">←</button>
       <h1 id="studio-title">Poster Studio</h1>
-      <button class="label-btn guide-open">使用指南</button>
     </div>
+    <div class="group" id="tab-group" hidden><label>类型</label><div class="seg" id="tab-seg"></div></div>
     <div class="group"><label>尺寸</label><div class="seg" id="size-seg"></div></div>
     <div id="field-groups"></div>
     <button id="import" class="ghost">导入提需</button>
